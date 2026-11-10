@@ -57,3 +57,14 @@ The autumn landing provides a reverse portal transition to winter. Home and Abou
 Home in the navbar (and the brand link) interrupts any active letter, igloo camera, hold or portal transition. A 0.28-second fade covers an immediate reset to the opening route, followed by a 0.72-second reveal and a small local camera arrival. It never waits for packing the envelope or reversing the portal. About retains its short approach just outside the igloo. Pending animation timelines are cancelled so they cannot restore the previous section after navigation.
 
 The navbar now shares one fixed layout across winter, the letter and autumn: identical height, brand, spacing and field-guide visibility at each screen breakpoint. Seasonal styling changes its colours only.
+
+
+## Botanical garden chapter
+The former autumn landing is now a Three.js botanical garden with a winding stone path, rose arches, mixed flower beds, a cherry-blossom swing, animated butterflies and falling petals, and a glass conservatory for future project exhibits. The existing two-second hold portal and reverse transition remain. Wheel and touch move through the garden. The supplied garden photos and Fernhollow description informed the atmosphere and motion; no external compiled engine is used.
+
+### Garden geometry and motion
+All garden flowers, foliage, butterfly wings, and birds are mesh geometry; there are no botanical photo sprites or image atlases. Petals rotate around their bases from a closed bud into an open bloom as the camera approaches, including cherry blossoms in the trees. Roses use overlapping petal layers; daisies have white ray petals and pollen centers; sunflowers have two golden petal rings and modeled seed heads. Fountain streams have wider tubes with moving shader highlights, droplets and ripples. The garden's exit is a living foliage portal to a reversible underwater preview. The original snow crossing's hold, camera flight, FOV pulse and tunnel wash are retained.
+
+The garden now has a modeled horse carriage viewed from the passenger seat, a close entrance swing, dedicated layered-rose borders and petal/leaf litter on the path. Plant stems extend and petals unfold within roughly 3–9 metres of the camera. The fountain has a tiered stone bowl, spill curtain, top jet and animated droplets; all water is geometry/shader driven.
+
+Garden navigation is directly available from the fixed navbar. Borders mix species rather than separating roses into rows; bloom sizes are reduced. Butterflies have three modeled wing silhouettes and five color palettes. The snow crossing retains the remote version's timing, hold interaction and FOV/tunnel effect, while its garden-side camera endpoint now matches the resting garden camera to avoid a snap at arrival. Garden shadows are warmed in the portal preview before crossing.
