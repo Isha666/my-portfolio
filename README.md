@@ -68,3 +68,26 @@ All garden flowers, foliage, butterfly wings, and birds are mesh geometry; there
 The garden now has a modeled horse carriage viewed from the passenger seat, a close entrance swing, dedicated layered-rose borders and petal/leaf litter on the path. Plant stems extend and petals unfold within roughly 3–9 metres of the camera. The fountain has a tiered stone bowl, spill curtain, top jet and animated droplets; all water is geometry/shader driven.
 
 Garden navigation is directly available from the fixed navbar. Borders mix species rather than separating roses into rows; bloom sizes are reduced. Butterflies have three modeled wing silhouettes and five color palettes. The snow crossing retains the remote version's timing, hold interaction and FOV/tunnel effect, while its garden-side camera endpoint now matches the resting garden camera to avoid a snap at arrival. Garden shadows are warmed in the portal preview before crossing.
+
+## Project treasure trail
+A left branch between garden path distances 12 and 64 takes the horse carriage into a four-chest clearing, then rejoins the main trail. Perceptiv, Zenith Fin, AI Farming Assistant and CIS use content from Isha's supplied résumé. Click a chest or its projected label to animate its hinged lid and open a keyboard-accessible project dialog; closing it closes the chest and preserves route position. Scrolling the project dialog does not move the carriage. No project URLs were invented.
+
+Seven chests now occupy a longer project branch: four résumé projects and three explicit reserved slots. Chests open within approach distance from either direction and close after passing, then reopen on return. Each holds an instanced gold heap and a 320-coin spill. Project panels are messenger-style parchment with visible upper/lower rollers; wheel, touch swipe, roller drag, keyboard arrows and an Unfurl button control reveal. Closing rolls the sheet back up first.
+
+## Raised treasure bridge
+The main carriage route climbs a timber bridge over animated water, passes seven project chests, and descends into the garden toward the next portal. Camera and horse height follow the deck. Rail planters, lanterns, stone supports, and shore rocks frame the crossing. Existing chest gold and automatic parchment unfurl remain available.
+
+The lakeside now includes close planted islands, mixed green/cherry groves, a pink blossom grove at the far bridge landing, five bobbing wooden boats (two with canopies), three glass domed pavilions, floating petals, and continuous mesh flower garlands along both bridge rails. Plant meshes are instanced to limit draw calls.
+
+The river crossing now keeps broad open water beside the bridge, with six smaller islands set farther out. Three boat routes travel across the channel beneath the raised deck. The far-shore cherry grove remains visible throughout the crossing; the bridge crest and perspective naturally reveal the landing.
+
+Cherry trees at the landing now have taller irregular forked branches and rounded clusters of mesh blossoms. Petal normals face upward for softer pink lighting. There is no distance-based visibility or opacity gate on the grove.
+
+Far-bank planting follows the terrain elevation rather than y=0, preventing flowers from disappearing into slopes. The destination has a double treeline, a cherry avenue with clipped hedges, flowering shrubs, 4,800 mixed meadow flowers and a petal carpet. Distant islands now contain mixed flowering/green trees and denser colourful planting. Broad water and crossing boat routes are preserved.
+
+The pre-bridge approach now has densely mixed 3D flower borders and four repeating flower-covered arches. Cherry canopy filler geometry has been removed entirely: branching carries individual blossom petals, keeping gaps and visible twigs rather than solid pink canopy masses. Rose layers have reduced vertical stacking to avoid a cone-shaped bloom. Uploaded cinematic garden references informed the planting density and depth; no video background replaced the interactive scene.
+
+Each of the five boats now has a seated mesh rower with clothing, head/hat, bent legs, articulated arms and two moving oars. Hand positions follow the oar grips through the stroke. Far-bank flowers increased to 14,500, concentrated along the visible waterline and extending wider to reduce exposed green slopes.
+
+## Flower-drawn water portal
+At the garden exit, approach the portal and draw a continuous 6 using pointer or touch. A faint guide shows the stroke; the trail consists of vector flowers. A shape check accepts a reasonably imprecise 6 and rejects a swipe or circle. Completing it charges the portal, then moves the camera through into the existing underwater preview. Clear/back controls and arrow-key drawing are provided. Garden travel pauses during the drawing interaction.

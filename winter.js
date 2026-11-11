@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {createSnowmanHome} from './snowman-home.js?v=mobile-touch-2';
-import {createSeasonPortal} from './season-portal.js?v=horse-bloom-9';
+import {createSeasonPortal} from './season-portal.js?v=bridge-18';
 import {createAboutStop} from './about-stop.js?v=arrival-bench-4';
 let aboutStop=null,seasonPortal=null,homeArrival=0;
 
