@@ -1,0 +1,19 @@
+export function makeMarineLife(T,scene,rnd){
+ const V=(x,y,z)=>new T.Vector3(x,y,z);
+ const time={value:0},fronds=new T.PlaneGeometry(.8,3.5,5,22);fronds.translate(0,1.75,0);
+ const leaf=new T.ShaderMaterial({side:T.DoubleSide,uniforms:{clock:time},vertexShader:`uniform float clock;varying vec2 v;varying float f;void main(){v=uv;vec3 p=position;float phase=instanceMatrix[3].x*.21+instanceMatrix[3].z*.12;p.x*=pow(sin(3.14159*clamp(uv.y,.004,.996)),.48);p.x+=sin(clock*1.4+phase-uv.y*3.)*.54*uv.y*uv.y;p.z+=cos(clock*.9+phase-uv.y*3.)*.48*uv.y;vec4 q=modelViewMatrix*instanceMatrix*vec4(p,1.);f=exp(-length(q.xyz)*.035);gl_Position=projectionMatrix*q;}`,fragmentShader:`varying vec2 v;varying float f;void main(){float veins=pow(max(0.,cos(v.y*100.-abs(v.x-.5)*11.)),6.);float rim=pow(abs(v.x-.5)*2.,4.);vec3 c=mix(vec3(.015,.15,.16),vec3(.09,.55,.39),v.y*.52+rim*.25+veins*.15);gl_FragColor=vec4(mix(vec3(.014,.035,.12),c,f),1.);}`});
+ const grass=new T.InstancedMesh(fronds,leaf,245),dummy=new T.Object3D();for(let i=0;i<49;i++){let x=(rnd()-.5)*68,z=(rnd()-.54)*71;for(const [cx,cz,r] of [[16,-4,7.0],[14,1,5.0],[-18,1,4.5],[5,19,5.2]]){const d=Math.hypot(x-cx,z-cz);if(d<r){x=cx+(x-cx)*r/Math.max(d,.01);z=cz+(z-cz)*r/Math.max(d,.01);}}for(let j=0;j<5;j++){dummy.position.set(x+(rnd()-.5)*1.7,-4.45,z+(rnd()-.5)*1.7);dummy.rotation.set((rnd()-.5)*.38,rnd()*6.28,(rnd()-.5)*.42);dummy.scale.set(.43+rnd()*.82,.49+rnd()*1.05,1);dummy.updateMatrix();grass.setMatrixAt(i*5+j,dummy.matrix);}}scene.add(grass);
+ const count=460,p=new Float32Array(count*3),sizes=new Float32Array(count),seeds=[];for(let i=0;i<count;i++){seeds.push({x:(rnd()-.5)*77,z:(rnd()-.52)*76,y:rnd()*26,s:.43+rnd()*.9});sizes[i]=.027+rnd()*.10;}
+ const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(p,3));geo.setAttribute('radius',new T.BufferAttribute(sizes,1));const bubbles=new T.Points(geo,new T.ShaderMaterial({transparent:true,depthWrite:false,
+ uniforms:{px:{value:Math.min(devicePixelRatio,2)}},vertexShader:`uniform float px;attribute float radius;varying float fade;void main(){vec4 m=modelViewMatrix*vec4(position,1.);gl_PointSize=clamp(radius*px*700./max(1.,-m.z),1.5,23.);fade=exp(-length(m.xyz)*.026);gl_Position=projectionMatrix*m;}`,
+ fragmentShader:`varying float fade;void main(){vec2 q=gl_PointCoord-.5;float r=length(q);float rim=smoothstep(.32,.46,r)*(1.-smoothstep(.46,.50,r));float shine=exp(-length(q-vec2(-.24,-.25))*18.);gl_FragColor=vec4(.43,.79,1.,(rim*.53+shine*.95)*fade);}`}));bubbles.frustumCulled=false;scene.add(bubbles);
+ const eddies=[];
+ for(const [x,z,r,phase] of [[-19,4,3.5,0],[18,-25,4,2.6],[1,-36,3,5.8],[-22,-26,2.8,8.4]]){
+  const uniforms={clock:time,phase:{value:phase}};
+  const swirl=new T.Mesh(new T.PlaneGeometry(r*2,r*2),new T.ShaderMaterial({uniforms,side:T.DoubleSide,transparent:true,depthWrite:false,blending:T.AdditiveBlending,
+   vertexShader:'varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+   fragmentShader:`varying vec2 v;uniform float clock,phase;void main(){vec2 p=(v-.5)*2.;float r=length(p),a=atan(p.y,p.x);float open=smoothstep(.07,.39,sin(clock*.31+phase));float spiral=pow(.5+.5*sin(4.*a+r*24.-clock*3.5),12.);float edge=smoothstep(.02,.23,r)*(1.-smoothstep(.64,1.,r));gl_FragColor=vec4(.12,.45,1.,spiral*edge*open*.57);}`}));
+  swirl.rotation.x=-Math.PI/2;swirl.position.copy(V(x,-3.66,z));scene.add(swirl);eddies.push({x,z,phase});
+ }
+ return {tick(t){time.value=t;seeds.forEach((s,i)=>{const eddy=i<92?eddies[i%4]:null,u=(s.y+t*s.s)%26;let x=s.x,z=s.z,y=-4.2+u;if(eddy){const a=t*.8+i*2.4,r=.65+(i%12)*.21;x=eddy.x+Math.cos(a)*r;z=eddy.z+Math.sin(a)*r;y=-3.7+(u%5)*.67;}p.set([x+Math.sin(t*.66+i)*.24,y,z+Math.cos(t*.43+i)*.2],i*3);});geo.attributes.position.needsUpdate=true;}};
+}

@@ -90,4 +90,11 @@ The pre-bridge approach now has densely mixed 3D flower borders and four repeati
 Each of the five boats now has a seated mesh rower with clothing, head/hat, bent legs, articulated arms and two moving oars. Hand positions follow the oar grips through the stroke. Far-bank flowers increased to 14,500, concentrated along the visible waterline and extending wider to reduce exposed green slopes.
 
 ## Flower-drawn water portal
-At the garden exit, approach the portal and draw a continuous 6 using pointer or touch. A faint guide shows the stroke; the trail consists of vector flowers. A shape check accepts a reasonably imprecise 6 and rejects a swipe or circle. Completing it charges the portal, then moves the camera through into the existing underwater preview. Clear/back controls and arrow-key drawing are provided. Garden travel pauses during the drawing interaction.
+At the garden exit, approach the portal and draw a continuous 6 using pointer or touch. A faint guide shows the stroke; the trail consists of vector flowers. A shape check accepts a reasonably imprecise 6 and rejects a swipe or circle. Completing it charges the portal, then moves the camera through into the underwater reef. Clear/back controls and arrow-key drawing are provided. Garden travel pauses during the drawing interaction.
+
+## Underwater skills
+Open **Skills** to play the whirlpool directly, or trace the flower 6 at the garden exit. The portal renders the marine scene through its aperture and the camera turns toward the surface before rolling down into the same reef. The surface whirlpool stays visible overhead. Reduced motion skips the dive.
+
+Drag to look around; scroll, use WASD or arrows, or drag the joystick to swim. Ctrl/Command + scroll and the +/− controls zoom the camera. The Dive Map glides to landmarks, and **View all skills** lists all 40 skills from the résumé’s Skills section plus XGBoost from its summary. Encounter panels focus on tools and technologies.
+
+The living tree assembles its particles and reveals three bioluminescent particle rocks around the trunk. The unlocked oyster releases rotating batches of translucent conches and scallops with fine mesh accents with Web & Mobile tools. The jellyfish orbit their own tools around a central anchor that opens the full 3D & Motion list. The lantern shark opens its jaw and releases Backend & Data tools in bubbles.
