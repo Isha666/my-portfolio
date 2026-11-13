@@ -3,7 +3,7 @@ import {createPineGeometry,addSnowyBoughs} from './winter-pines.js';
 import {createGardenHome} from './garden-home.js?v=miniature-6';
 import * as THREE from './vendor/three.module.js';
 
-export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkills,initialWorld=0,winterScene,onFrame,onVisibility}){
+export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkills,initialWorld=0,trailMountains,winterScene,onFrame,onVisibility}){
  const scene=new THREE.Scene();scene.background=new THREE.Color('#102238');scene.fog=new THREE.FogExp2('#183049',.024);
  const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.1,175);camera.position.set(0,2.9,11);camera.lookAt(0,2.55,0);
  const homeLights=new THREE.Group();scene.add(homeLights);homeLights.add(new THREE.HemisphereLight('#dceaff','#47546a',1.2));const light=new THREE.DirectionalLight('#ffe6cb',3);light.position.set(-4,7,6);homeLights.add(light);const rim=new THREE.DirectionalLight('#91c9ff',2);rim.position.set(4,5,-3);homeLights.add(rim);
@@ -78,9 +78,29 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   pineBatches.get(key).matrices.push(pineTransform.matrix.clone());
  }
  const boughSnow=new THREE.MeshStandardMaterial({color:'#dce9f4',roughness:.88});
- for(const [x,z,h] of pines){
-  rod(scene,[x,-.2,z],[x,h-.2,z],.12+h*.009,wood);
-  addSnowyBoughs({x,y:-.2,z,h,geometry:pineGeometry,needles:evergreen,snow:boughSnow,instance,rand});
+ const decoratedPines=new Set([0,4,5]);
+ const firNeedles=new THREE.MeshStandardMaterial({color:'#25563e',roughness:1});
+ const ornament=new THREE.MeshStandardMaterial({color:'#aa2335',roughness:.26,metalness:.18});
+ const ornamentGeometry=new THREE.SphereGeometry(1,12,8);
+ for(const [index,[x,z,h]] of pines.entries()){
+  const decorated=decoratedPines.has(index);
+  rod(scene,[x,-.2,z],[x,h*(decorated?.94:1)-.2,z],.12+h*.009,wood);
+  if(!decorated){
+   addSnowyBoughs({x,y:-.2,z,h,geometry:pineGeometry,needles:evergreen,snow:boughSnow,instance,rand});
+   continue;
+  }
+  for(let row=0;row<9;row++){
+   const t=row/8;
+   const y=h*(.28+t*.66)-.2;
+   const radius=h*(.235*(1-t)+.022);
+   instance(pineGeometry.foliageCone,firNeedles,x,y,z,radius,h*.15,radius,0,row*.67);
+   if(row>=5)continue;
+   const angle=.65+(row%3)*.88;
+   const bx=x+Math.cos(angle)*radius*.87,bz=z+Math.sin(angle)*radius*.87;
+   const hookY=y-h*.057,size=h*.021;
+   rod(scene,[bx,hookY,bz],[bx,hookY-size*.8,bz],size*.07,wood);
+   instance(ornamentGeometry,ornament,bx,hookY-size*1.6,bz,size,size,size);
+  }
  }
  for(const {geometry,material,matrices} of pineBatches.values()){
   const mesh=new THREE.InstancedMesh(geometry,material,matrices.length);
@@ -91,9 +111,17 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  const {aurora,time:auroraTime}=createAurora(THREE);
  scene.add(aurora);
 
- // Layered alpine ridges, with exposed rock below the snow line.
- const rock=new THREE.MeshStandardMaterial({color:'#425873',roughness:1});
- for(let i=0;i<23;i++){const x=-121+i*11,z=-63-(i%3)*9,h=14+(i*7%9)*2.2;const g=new THREE.ConeGeometry(12+(i%3)*2,h,25,12);const a=g.attributes.position;for(let j=0;j<a.count;j++){const x=a.getX(j),y=a.getY(j),z=a.getZ(j),n=1+.16*Math.sin(x*1.7+z*.9+y*.7);a.setXYZ(j,x*n,y,z*n);}g.computeVertexNormals();const m=new THREE.Mesh(g,rock);m.position.set(x,h/2-1,z);scene.add(m);const cap=new THREE.Mesh(g.clone(),snow);cap.scale.set(.88,.74,.88);cap.position.set(x,h*.63,z);scene.add(cap);}
+ // Share the trail's sculpted slopes and vertex-painted snow with the Home skyline.
+ const skyline=[
+  [3,-64,-105,.16],[0,-39,-88,.17],[2,-20,-84,.15],
+  [1,3,-96,.16],[0,26,-83,.16],[2,49,-97,.18],[3,71,-112,.17]
+ ];
+ for(const [index,x,z,scale] of skyline){
+  const peak=trailMountains[index].clone();
+  peak.position.set(x,-1.2,z);
+  peak.scale.setScalar(scale);
+  scene.add(peak);
+ }
  const igloo=new THREE.Group();igloo.position.set(-4.6,-.2,-16);igloo.rotation.y=.23;scene.add(igloo);const dome=new THREE.Mesh(new THREE.SphereGeometry(2.05,40,24,0,Math.PI*2,0,Math.PI/2),snow);igloo.add(dome);const seam=new THREE.MeshStandardMaterial({color:'#8da5b9',roughness:1});for(let row=1;row<6;row++){const angle=row*Math.PI/12,r=2.055*Math.sin(angle),y=2.055*Math.cos(angle);const ring=new THREE.Mesh(new THREE.TorusGeometry(r,.012,5,70),seam);ring.rotation.x=Math.PI/2;ring.position.y=y;igloo.add(ring);for(let j=0;j<row*5;j++){const az=j*Math.PI*2/(row*5)+(row%2)*.19;rod(igloo,[Math.cos(az)*r,y,Math.sin(az)*r],[Math.cos(az)*r*.9,y+.19,Math.sin(az)*r*.9],.01,seam);}}
  const arch=new THREE.Mesh(new THREE.TorusGeometry(.66,.24,12,32,Math.PI),snow);arch.position.set(0,.05,1.9);igloo.add(arch);const doorway=new THREE.Mesh(new THREE.CircleGeometry(.64,32,0,Math.PI),new THREE.MeshBasicMaterial({color:'#192c40',side:THREE.DoubleSide}));doorway.position.set(0,.05,2.04);igloo.add(doorway);const warm=new THREE.PointLight('#ffd39b',4,6);warm.position.set(0,.4,2.5);igloo.add(warm);
  for(const [x,z,scale,yaw] of [[5,-19,.92,-.25],[-10,-23,.78,.31],[11,-27,1.10,-.28],[-17,-35,1,.33],[19,-34,.94,-.36]]){
@@ -309,7 +337,10 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  });
  bunnyShadow.position.set(bunny.position.x,-.191,bunny.position.z);
  function renderWorld(index){
-  if(index===0){renderer.render(scene,camera);return;}
+  if(index===0){
+   renderer.render(scene,camera);
+   return;
+  }
   const lookingAtPortal=(portalHovered||document.activeElement===portal)&&intro>=2.65;
   if(index===1){
    garden.render(renderer,dt,t,gazeX,gazeY,lookingAtPortal,reduced,intro,idle);
@@ -327,24 +358,30 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   eyeScreenX=(pose.gazePoint.x+1)*innerWidth/2;
   eyeScreenY=(1-pose.gazePoint.y)*innerHeight/2;
  }
- const lower=Math.floor(progress),mix=progress-lower;
- renderWorld(worldIndex(lower));
- if(mix===0)return;
- const size=renderer.getDrawingBufferSize(blendSize);
- if(!blendTarget)blendTarget=new THREE.WebGLRenderTarget(size.x,size.y);
- else if(blendTarget.width!==size.x||blendTarget.height!==size.y)blendTarget.setSize(size.x,size.y);
- const previousTarget=renderer.getRenderTarget(),autoClear=renderer.autoClear;
- try{
-  renderer.setRenderTarget(blendTarget);
-  renderWorld(worldIndex(lower+1));
-  renderer.setRenderTarget(previousTarget);
-  renderer.autoClear=false;
-  blendMaterial.uniforms.nextImage.value=blendTarget.texture;
-  blendMaterial.uniforms.progress.value=mix;
-  renderer.render(blendScene,blendCamera);
- }finally{
-  renderer.setRenderTarget(previousTarget);
-  renderer.autoClear=autoClear;
+ function compositeWorld(index,reveal){
+  const size=renderer.getDrawingBufferSize(blendSize);
+  if(!blendTarget)blendTarget=new THREE.WebGLRenderTarget(size.x,size.y);
+  else if(blendTarget.width!==size.x||blendTarget.height!==size.y)blendTarget.setSize(size.x,size.y);
+  const previousTarget=renderer.getRenderTarget(),autoClear=renderer.autoClear;
+  try{
+   renderer.setRenderTarget(blendTarget);
+   renderer.autoClear=true;
+   renderWorld(index);
+   renderer.setRenderTarget(previousTarget);
+   renderer.autoClear=reveal===1;
+   blendMaterial.uniforms.nextImage.value=blendTarget.texture;
+   blendMaterial.uniforms.progress.value=reveal;
+   renderer.render(blendScene,blendCamera);
+  }finally{
+   renderer.setRenderTarget(previousTarget);
+   renderer.autoClear=autoClear;
+  }
  }
+ const lower=Math.floor(progress),mix=progress-lower;
+ const baseWorld=worldIndex(lower);
+ // Use the same offscreen pass and color conversion as the left-scroll reveal.
+ if(baseWorld===0)compositeWorld(baseWorld,1);
+ else renderWorld(baseWorld);
+ if(mix!==0)compositeWorld(worldIndex(lower+1),mix);
  }};
 }

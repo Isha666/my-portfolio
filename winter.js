@@ -2,7 +2,7 @@ import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
 import {createPineGeometry,addSnowyBoughs} from './winter-pines.js';
 import {createSeasonPortal} from './season-portal.js?v=resume-view-1';
 import * as THREE from './vendor/three.module.js';
-import {createSnowmanHome} from './snowman-home.js?v=resume-view-1';
+import {createSnowmanHome} from './snowman-home.js?v=winter-home-firs-2';
 import {createGardenCrossing} from './garden-crossing.js?v=trail-controls-2';
 import {playSnowSquall} from './snow-squall.js?v=2';
 import {createAboutStop} from './about-stop.js?v=igloo-entry-4';
@@ -102,8 +102,13 @@ function snowman(x,z){const y=height(x,z);const snowGlow=new THREE.MeshStandardM
 snowman(path(20).x-3.6,-20);
 // Fully modelled alpine massifs: ridged slopes, exposed rock and snow gullies.
 function terrainNoise(x,z){const ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz,u=fx*fx*(3-2*fx),v=fz*fz*(3-2*fz);const hash=(a,b)=>{const q=Math.sin(a*127.1+b*311.7)*43758.5453;return q-Math.floor(q)};return THREE.MathUtils.lerp(THREE.MathUtils.lerp(hash(ix,iz),hash(ix+1,iz),u),THREE.MathUtils.lerp(hash(ix,iz+1),hash(ix+1,iz+1),u),v);}
-function mountain(cx,cz,radius,peak,index){const geo=new THREE.PlaneGeometry(radius*2,radius*2,100,100);geo.rotateX(-Math.PI/2);const pos=geo.attributes.position,colors=[];for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),r=Math.sqrt(x*x+z*z)/radius,a=Math.atan2(z,x);const spine=1+Math.sin(a*3+index)*.13+Math.sin(a*5+1)*.04;const base=Math.max(0,1-r/spine);const noise=terrainNoise(x*.045,z*.045)*.55+terrainNoise(x*.10,z*.10)*.28+terrainNoise(x*.23,z*.23)*.17;const h=Math.pow(base,1.45)*peak+(noise-.5)*base*(1-base)*peak*.5;pos.setY(i,h);const veins=terrainNoise(x*.11,z*.11)*.65+terrainNoise(x*.3,z*.3)*.35;const snowCover=clamp(.58+base*.3+Math.sin(a*5)*.16-veins*.29,0,1);const rock=new THREE.Color('#344559'),snow=new THREE.Color('#dce6f1');const c=rock.lerp(snow,snowCover>.65?.93:snowCover*.36);if(h>peak*.67)c.lerp(new THREE.Color('#efc8b0'),.18);colors.push(c.r,c.g,c.b);}geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.computeVertexNormals();const m=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,fog:false});const o=object(geo,m,cx,-2,cz);o.castShadow=false;}
-mountain(-165,-455,155,155,1);mountain(12,-510,165,205,2);mountain(180,-470,170,174,3);mountain(-50,-650,210,240,4);
+function mountain(cx,cz,radius,peak,index){const geo=new THREE.PlaneGeometry(radius*2,radius*2,100,100);geo.rotateX(-Math.PI/2);const pos=geo.attributes.position,colors=[];for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),r=Math.sqrt(x*x+z*z)/radius,a=Math.atan2(z,x);const spine=1+Math.sin(a*3+index)*.13+Math.sin(a*5+1)*.04;const base=Math.max(0,1-r/spine);const noise=terrainNoise(x*.045,z*.045)*.55+terrainNoise(x*.10,z*.10)*.28+terrainNoise(x*.23,z*.23)*.17;const h=Math.pow(base,1.45)*peak+(noise-.5)*base*(1-base)*peak*.5;pos.setY(i,h);const veins=terrainNoise(x*.11,z*.11)*.65+terrainNoise(x*.3,z*.3)*.35;const snowCover=clamp(.58+base*.3+Math.sin(a*5)*.16-veins*.29,0,1);const rock=new THREE.Color('#344559'),snow=new THREE.Color('#dce6f1');const c=rock.lerp(snow,snowCover>.65?.93:snowCover*.36);if(h>peak*.67)c.lerp(new THREE.Color('#efc8b0'),.18);colors.push(c.r,c.g,c.b);}geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.computeVertexNormals();const m=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,fog:false});const o=object(geo,m,cx,-2,cz);o.castShadow=false;return o;}
+const trailMountains=[
+ mountain(-165,-455,155,155,1),
+ mountain(12,-510,165,205,2),
+ mountain(180,-470,170,174,3),
+ mountain(-50,-650,210,240,4)
+];
 // Snow-block igloos, placed where they can be seen from the sleigh route.
 const iceBlock=new THREE.MeshStandardMaterial({color:'#dbe8f0',roughness:.86});const entranceMat=new THREE.MeshStandardMaterial({color:'#172c43',roughness:1});
 function igloo(d,side= -1){const p=path(d),x=p.x+side*8,z=-d,y=height(x,z),r=3.1;for(let row=0;row<7;row++){const theta0=row/7*Math.PI/2+.009,theta1=Math.PI/14-.018;const pieces=Math.max(5,Math.round(24*Math.sin(theta0+theta1*.5)));for(let j=0;j<pieces;j++){const phi=j*Math.PI*2/pieces+(row%2)*Math.PI/pieces;const g=new THREE.SphereGeometry(r,5,3,phi+.012,Math.PI*2/pieces-.024,theta0,theta1);const o=object(g,iceBlock,x,y,z);o.castShadow=false;}}const tunnel=object(new THREE.CylinderGeometry(.95,.95,2.5,20,1,true,0,Math.PI),iceBlock,x,y+.05,z+3);tunnel.rotation.x=Math.PI/2;tunnel.rotation.z=Math.PI/2;const front=object(new THREE.CircleGeometry(.83,24),entranceMat,x,y+.65,z+4.28);front.scale.y=1.1;const lip=object(new THREE.TorusGeometry(.93,.2,7,24,Math.PI),branchSnow,x,y+.1,z+4.3);const light=new THREE.PointLight('#ffc77f',6,8,2);light.position.set(x,y+.8,z+3.5);scene.add(light);ball(branchSnow,x,y-.05,z+4,1.5,.15,2);}
@@ -187,7 +192,7 @@ async function openLandscape(key){
  }
 }
 // Each implemented portfolio destination owns its arrival approach.
-const snowmanHome=createSnowmanHome({renderer,reduced,initialWorld:restoredWorld,winterScene:scene,onVisibility:active=>{team.visible=sled.visible=!active;},onFrame:(dt,t)=>{for(const field of snowFields)field.points.visible=false;},onExplore:button=>enterWinter(button),onProjects:()=>openLandscape('projects'),onSkills:()=>openLandscape('skills')});
+const snowmanHome=createSnowmanHome({renderer,reduced,initialWorld:restoredWorld,trailMountains,winterScene:scene,onVisibility:active=>{team.visible=sled.visible=!active;},onFrame:(dt,t)=>{for(const field of snowFields)field.points.visible=false;},onExplore:button=>enterWinter(button),onProjects:()=>openLandscape('projects'),onSkills:()=>openLandscape('skills')});
 let navTransition=null,navShade=null;
 const stopStormScroll=event=>{if(document.querySelector(".snow-squall"))event.preventDefault();};
 addEventListener("wheel",stopStormScroll,{passive:false});
