@@ -1,7 +1,7 @@
 // The Coding Club Join Us petal surface, sampled as indexed WebGL geometry.
-export function makeMarineBloom(T,parent,{scale=1,colors=['#acd9ff','#b8a6fa','#ffe3fa']}={}){
+export function makeMarineBloom(T,parent,{scale=1,colors=['#acd9ff','#b8a6fa','#ffe3fa'],rows=24,cols=12}={}){
  const root=new T.Group();root.scale.setScalar(scale);parent.add(root);
- const petals=[],rows=24,cols=12;
+ const petals=[];
  for(let layer=0;layer<3;layer++){
   const count=[8,7,6][layer];
   const material=new T.ShaderMaterial({side:T.DoubleSide,transparent:true,depthWrite:false,

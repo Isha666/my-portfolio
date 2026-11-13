@@ -1,8 +1,29 @@
-export function makeMarineLife(T,scene,rnd){
+export function makeMarineLife(T,scene,rnd,corners=[]){
  const V=(x,y,z)=>new T.Vector3(x,y,z);
  const time={value:0},fronds=new T.PlaneGeometry(.8,3.5,5,22);fronds.translate(0,1.75,0);
- const leaf=new T.ShaderMaterial({side:T.DoubleSide,uniforms:{clock:time},vertexShader:`uniform float clock;varying vec2 v;varying float f;void main(){v=uv;vec3 p=position;float phase=instanceMatrix[3].x*.21+instanceMatrix[3].z*.12;p.x*=pow(sin(3.14159*clamp(uv.y,.004,.996)),.48);p.x+=sin(clock*1.4+phase-uv.y*3.)*.54*uv.y*uv.y;p.z+=cos(clock*.9+phase-uv.y*3.)*.48*uv.y;vec4 q=modelViewMatrix*instanceMatrix*vec4(p,1.);f=exp(-length(q.xyz)*.035);gl_Position=projectionMatrix*q;}`,fragmentShader:`varying vec2 v;varying float f;void main(){float veins=pow(max(0.,cos(v.y*100.-abs(v.x-.5)*11.)),6.);float rim=pow(abs(v.x-.5)*2.,4.);vec3 c=mix(vec3(.015,.15,.16),vec3(.09,.55,.39),v.y*.52+rim*.25+veins*.15);gl_FragColor=vec4(mix(vec3(.014,.035,.12),c,f),1.);}`});
- const grass=new T.InstancedMesh(fronds,leaf,245),dummy=new T.Object3D();for(let i=0;i<49;i++){let x=(rnd()-.5)*68,z=(rnd()-.54)*71;for(const [cx,cz,r] of [[16,-4,7.0],[14,1,5.0],[-18,1,4.5],[5,19,5.2]]){const d=Math.hypot(x-cx,z-cz);if(d<r){x=cx+(x-cx)*r/Math.max(d,.01);z=cz+(z-cz)*r/Math.max(d,.01);}}for(let j=0;j<5;j++){dummy.position.set(x+(rnd()-.5)*1.7,-4.45,z+(rnd()-.5)*1.7);dummy.rotation.set((rnd()-.5)*.38,rnd()*6.28,(rnd()-.5)*.42);dummy.scale.set(.43+rnd()*.82,.49+rnd()*1.05,1);dummy.updateMatrix();grass.setMatrixAt(i*5+j,dummy.matrix);}}scene.add(grass);
+ const leaf=new T.ShaderMaterial({side:T.DoubleSide,uniforms:{clock:time},vertexShader:`uniform float clock;varying vec2 v;varying float f;varying float hue;void main(){v=uv;hue=fract(sin(dot(instanceMatrix[3].xz,vec2(12.9898,78.233)))*43758.5453);vec3 p=position;float phase=instanceMatrix[3].x*.21+instanceMatrix[3].z*.12;p.x*=pow(sin(3.14159*clamp(uv.y,.004,.996)),.48);p.x+=sin(clock*1.4+phase-uv.y*3.)*.54*uv.y*uv.y;p.z+=cos(clock*.9+phase-uv.y*3.)*.48*uv.y;vec4 q=modelViewMatrix*instanceMatrix*vec4(p,1.);f=exp(-length(q.xyz)*.035);gl_Position=projectionMatrix*q;}`,fragmentShader:`varying vec2 v;varying float f;varying float hue;void main(){float veins=pow(max(0.,cos(v.y*100.-abs(v.x-.5)*11.)),6.);float rim=pow(abs(v.x-.5)*2.,4.);vec3 c=mix(vec3(.015,.15,.16),mix(vec3(.09,.55,.39),mix(vec3(.18,.57,.57),vec3(.47,.25,.53),smoothstep(.72,.94,hue)),smoothstep(.38,.74,hue)),v.y*.52+rim*.25+veins*.15);gl_FragColor=vec4(mix(vec3(.014,.035,.12),c,f),1.);}`});
+ const existingPatches=49,patchesPerCorner=12,bladesPerPatch=5;
+ const patchCount=existingPatches+corners.length*patchesPerCorner;
+ const grass=new T.InstancedMesh(fronds,leaf,patchCount*bladesPerPatch),dummy=new T.Object3D();
+ for(let i=0;i<patchCount;i++){
+  let x=(rnd()-.5)*68,z=(rnd()-.54)*71;
+  if(i>=existingPatches){
+   const [cx,cz]=corners[Math.floor((i-existingPatches)/patchesPerCorner)];
+   x=cx+(rnd()-.5)*10;z=cz+(rnd()-.5)*11;
+  }
+  for(const [cx,cz,r] of [[16,-4,7],[14,1,5],[-18,1,4.5],[5,19,5.2]]){
+   const d=Math.hypot(x-cx,z-cz);
+   if(d<r){x=cx+(x-cx)*r/Math.max(d,.01);z=cz+(z-cz)*r/Math.max(d,.01);}
+  }
+  for(let j=0;j<bladesPerPatch;j++){
+   const px=x+(rnd()-.5)*1.7,pz=z+(rnd()-.5)*1.7;
+   dummy.position.set(px,-4.55+Math.sin(px*.22)*Math.cos(pz*.16)*.46,pz);
+   dummy.rotation.set((rnd()-.5)*.38,rnd()*6.28,(rnd()-.5)*.42);
+   dummy.scale.set(.43+rnd()*.82,.49+rnd()*1.05,1);
+   dummy.updateMatrix();grass.setMatrixAt(i*bladesPerPatch+j,dummy.matrix);
+  }
+ }
+ scene.add(grass);
  const count=460,p=new Float32Array(count*3),sizes=new Float32Array(count),seeds=[];for(let i=0;i<count;i++){seeds.push({x:(rnd()-.5)*77,z:(rnd()-.52)*76,y:rnd()*26,s:.43+rnd()*.9});sizes[i]=.027+rnd()*.10;}
  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(p,3));geo.setAttribute('radius',new T.BufferAttribute(sizes,1));const bubbles=new T.Points(geo,new T.ShaderMaterial({transparent:true,depthWrite:false,
  uniforms:{px:{value:Math.min(devicePixelRatio,2)}},vertexShader:`uniform float px;attribute float radius;varying float fade;void main(){vec4 m=modelViewMatrix*vec4(position,1.);gl_PointSize=clamp(radius*px*700./max(1.,-m.z),1.5,23.);fade=exp(-length(m.xyz)*.026);gl_Position=projectionMatrix*m;}`,
