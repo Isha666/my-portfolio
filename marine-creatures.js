@@ -1,7 +1,7 @@
 import {makeMarineShark} from './marine-shark.js';
 import {makeMarineRelics} from './marine-relics.js';
 import {makeMarineBloom} from './marine-bloom.js';
-export function marineCreatures(T,scene){
+export function marineCreatures(T,scene,{preview=false}={}){
  const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
  const standard=(color,emissive=color,intensity=.12)=>new T.MeshStandardMaterial({color,emissive,emissiveIntensity:intensity,roughness:.58});
  const ball=new T.SphereGeometry(1,18,12);
@@ -45,27 +45,27 @@ export function marineCreatures(T,scene){
  const jelly=group(0,5,-22),jellies=[];
  function makeJelly(parent,scale,phase){const g=new T.Group();g.scale.setScalar(scale);parent.add(g);const bloom=makeMarineBloom(T,g,{scale:1.25});bloom.root.rotation.set(Math.PI*.75,0,.23);const core=mesh(g,ball,new T.MeshPhysicalMaterial({color:'#b7eaff',emissive:'#65acf4',emissiveIntensity:.55,transparent:true,opacity:.37,depthWrite:false,roughness:.24}),V(0,-.1,0),V(.37,.29,.37));const filaments=[];for(let i=0;i<20;i++){const p=new Float32Array(25*3),geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(p,3));const line=new T.Line(geo,new T.LineBasicMaterial({color:i%3?'#8199e6':'#c4eaff',transparent:true,opacity:.65}));line.frustumCulled=false;g.add(line);filaments.push(line);}
  jellies.push({g,bloom,core,filaments,phase});return g;}
- makeJelly(jelly,1.35,0);makeJelly(jelly,.63,1);makeJelly(jelly,.45,2);
- const shark=makeMarineShark(T,scene);
- const values=[0,0,0,0].map(()=>({v:0})),landmarks=[tree,oyster,jelly,shark.group],unlocked=[false,false,false,false],manual=[null,null,null,null],live=[0,0,0,0];
- const artifacts=makeMarineRelics(T,landmarks),inverse=new T.Matrix4();let gust=0,hover=0,highlight=-1;
+ makeJelly(jelly,1.35,0);makeJelly(jelly,.63,1);makeJelly(jelly,preview?.67:.45,2);
+ const shark=preview?null:makeMarineShark(T,scene);
+ const values=[0,0,0,0].map(()=>({v:0})),landmarks=[tree,oyster,jelly,shark?.group],unlocked=[false,false,false,false],manual=[null,null,null,null],live=[0,0,0,0];
+ const artifacts=preview?null:makeMarineRelics(T,landmarks),inverse=new T.Matrix4();let gust=0,hover=0,highlight=-1;
  return {landmarks,
   amount(i){return manual[i]??live[i];},isUnlocked(i){return unlocked[i];},
-  relics:artifacts.relics,smallRocks:artifacts.smallRocks,
+  relics:artifacts?.relics,smallRocks:artifacts?.smallRocks,
   cursor(ray){hover=ray?1:0;if(ray){tree.updateWorldMatrix(true,false);inverse.copy(tree.matrixWorld).invert();treeUniforms.rayOrigin.value.copy(ray.origin).applyMatrix4(inverse);treeUniforms.rayDirection.value.copy(ray.direction).transformDirection(inverse);}},
   release(i){manual[i]=null;},
   manipulate(i,dx,dy){const o=landmarks[i];o.rotation.y+=dx*.012;o.rotation.x=T.MathUtils.clamp(o.rotation.x+dy*.006,-.55,.55);if(i===0)gust=Math.min(1.8,gust+Math.abs(dx)*.022);},
-  scrub(i,value){gsap.killTweensOf(values[i]);manual[i]=T.MathUtils.clamp(value,0,1);values[i].v=manual[i];},
+  scrub(i,value){if(manual[i]===null)gsap.killTweensOf(values[i]);manual[i]=T.MathUtils.clamp(value,0,1);values[i].v=manual[i];},
   activate(i,on){if(i===0&&on)gust=1.65;if(i>0&&on)unlocked[i]=true;manual[i]=null;gsap.to(values[i],{v:on||unlocked[i]?1:0,duration:i===1?1.9:1.35,ease:'power2.inOut',overwrite:true});},
   treeTips,selectBranch(i){highlight=i;treeUniforms.selected.value=i;gust=i<0?0:1.5;},
   tick(t,dt){
    fiberClock.value=t;gust*=Math.exp(-dt*1.55);const b=values[0].v;treeUniforms.clock.value=t;treeUniforms.charge.value=b;treeUniforms.gust.value=gust;treeUniforms.hover.value=T.MathUtils.lerp(treeUniforms.hover.value,hover,1-Math.exp(-dt*12));rootWave.scale.setScalar(1+b*5.5);rootWave.material.opacity=Math.sin(b*Math.PI)*.45;
    const loop=(speed,offset=0)=>T.MathUtils.smoothstep(.5-.5*Math.cos(t*speed+offset),.06,.94);
    const s=manual[1]??(unlocked[1]?values[1].v*loop(1.06):values[1].v),jellyOpen=manual[2]??loop(1.52,.35);
-   shells[0].position.y=-s*.51;shells[1].position.y=s*1.5;shells[1].rotation.x=-s*.52;shells[0].rotation.x=s*.20;pearl.position.y=s*.65+Math.sin(t*1.8)*.05;pearl.visible=s>.06;pearl.scale.setScalar(.39-s*.19);
-   const q=T.MathUtils.smoothstep(s,.3,1);pearlBloom.root.visible=q>.01;pearlBloom.root.position.set(0,s*.18,.25);pearlBloom.root.rotation.set(.48,t*.16,0);if(q>.01)pearlBloom.update(q);
-   jellies.forEach(({g,bloom,core,filaments,phase},i)=>{const opening=i===0?.15+jellyOpen*.83:.37+Math.sin(t*1.48+phase)*.23;g.position.set(i===0?0:i===1?-3.7:3.5,Math.sin(t*.45+phase)*.5+i*.9,Math.cos(t*.4+phase)*.65-i*1.4);g.rotation.y=t*.19+phase;g.userData.opening=opening;bloom.update(opening);core.scale.setScalar(.30+opening*.14);filaments.forEach((line,k)=>{const a=k/20*6.28,p=line.geometry.attributes.position,coreRadius=core.scale.x,attachment=(.32+(k%3)*.11)*coreRadius,baseY=core.position.y-coreRadius*.67;for(let j=0;j<25;j++){const u=j/24,spread=(.12+(k%3)*.13)*opening*Math.sin(u*Math.PI*.78),r=attachment+spread;p.setXYZ(j,Math.cos(a)*r+Math.sin(t*1.7-u*6+k)*u*.39,baseY-u*(2.0+k%5*.43),Math.sin(a)*r+Math.cos(t*1.1-u*4+k)*u*.5);}p.needsUpdate=true;});});
-   const scan=values[3].v,mouth=shark.tick(t,scan);live[0]=b;live[1]=s;live[2]=jellyOpen;live[3]=scan;artifacts.update(t,live,unlocked,highlight,jellies,mouth);
+   shells[0].position.y=-s*.51;shells[1].position.y=s*1.5;shells[1].rotation.x=-s*.52;shells[0].rotation.x=s*.20;pearl.position.y=s*.65+Math.sin(t*1.8)*.05;pearl.visible=!preview&&s>.06;pearl.scale.setScalar(.39-s*.19);
+   const q=T.MathUtils.smoothstep(s,.3,1);pearlBloom.root.visible=!preview&&q>.01;pearlBloom.root.position.set(0,s*.18,.25);pearlBloom.root.rotation.set(.48,t*.16,0);if(pearlBloom.root.visible)pearlBloom.update(q);
+   jellies.forEach(({g,bloom,core,filaments,phase},i)=>{const opening=i===0?.15+jellyOpen*.83:.37+Math.sin(t*1.48+phase)*.23;g.position.set(i===0?0:i===1?(preview?2.6:-3.7):preview?jelly.userData.rightOffset:3.5,Math.sin(t*.45+phase)*.5+i*.9,Math.cos(t*.4+phase)*.65-i*1.4);g.rotation.y=t*.19+phase;g.userData.opening=opening;bloom.update(opening);core.scale.setScalar(.30+opening*.14);filaments.forEach((line,k)=>{const a=k/20*6.28,p=line.geometry.attributes.position,coreRadius=core.scale.x,attachment=(.32+(k%3)*.11)*coreRadius,baseY=core.position.y-coreRadius*.67;for(let j=0;j<25;j++){const u=j/24,spread=(.12+(k%3)*.13)*opening*Math.sin(u*Math.PI*.78),r=attachment+spread;p.setXYZ(j,Math.cos(a)*r+Math.sin(t*1.7-u*6+k)*u*.39,baseY-u*(2.0+k%5*.43),Math.sin(a)*r+Math.cos(t*1.1-u*4+k)*u*.5);}p.needsUpdate=true;});});
+   const scan=values[3].v,mouth=shark?.tick(t,scan);live[0]=b;live[1]=s;live[2]=jellyOpen;live[3]=scan;artifacts?.update(t,live,unlocked,highlight,jellies,mouth);
 
   }
  };

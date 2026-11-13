@@ -1,4 +1,4 @@
-export function makeReefWildlife(T,scene){
+export function makeReefWildlife(T,scene,{preview=false}={}){
  const V=(x,y,z)=>new T.Vector3(x,y,z);
  const ball=new T.SphereGeometry(1,22,16);
  const matte=color=>new T.MeshStandardMaterial({color,roughness:.71});
@@ -55,7 +55,8 @@ export function makeReefWildlife(T,scene){
   {x:-24,y:2.7,z:14,width:4.5,depth:5,speed:.16,phase:4.1,size:1.09},
   {x:24,y:1.2,z:13,width:4,depth:5,speed:.14,phase:5.2,size:.93}
  ];
- const turtles=routes.map(route=>({...route,...makeTurtle(route.size)}));
+ const homeRoute={x:-3.8,y:.95,z:-15,width:3.1,depth:2.2,speed:.24,phase:1.2,size:.83};
+ const turtles=(preview?[homeRoute]:routes).map(route=>({...route,...makeTurtle(route.size)}));
  const horses=[];
  const horseColors=['#e2a765','#bc7c99','#77aca9'];
  const horsePositions=[

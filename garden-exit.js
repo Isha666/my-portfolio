@@ -48,6 +48,7 @@ export function createGardenExit(THREE,garden,camera,renderer){
   enterThroughVortex(){if(reduced){enter();return;}lastDiveFrame=0;diving=whirling=true;document.body.classList.add('marine-diving');vortex.start();},
   get scene(){return active?marine.scene:whirling?vortex.scene:null},
   get active(){return active},
+  get entering(){return diving},
   get busy(){return drawing||diving||whirling||!!transition},
   reset(){requestGeneration++;transition?.kill();transition=null;gsap.killTweensOf(dive);gsap.killTweensOf(veil);diving=drawing=whirling=active=false;document.body.classList.remove('marine-diving');windowMesh.visible=false;vortex?.settle(0);spell.hide();marine?.leave();ui.hidden=true;veil.style.opacity=0;camera.fov=66;camera.updateProjectionMatrix();},
   tick(dt,time,distance,inGarden){

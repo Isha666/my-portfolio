@@ -1,7 +1,7 @@
 import {makeMarineFloorLife} from './marine-floor-life.js';
-import {makeReefWildlife} from './marine-wildlife.js';
+import {makeReefWildlife} from './marine-wildlife.js?v=oyster-home-1';
 import {marineSurface} from './marine-shells.js';
-export function makeMarineDiscoveries(T,scene){
+export function makeMarineDiscoveries(T,scene,{preview=false}={}){
  let seed=437;const rand=()=>((seed=seed*16807%2147483647)-1)/2147483646;
  const V=(x,y,z)=>new T.Vector3(x,y,z), floor=(x,z)=>-4.5+Math.sin(x*.22)*Math.cos(z*.16)*.46;
  const material=(color,glow=color,power=.15)=>new T.MeshStandardMaterial({color,emissive:glow,emissiveIntensity:power,roughness:.74});
@@ -20,7 +20,7 @@ export function makeMarineDiscoveries(T,scene){
  const sparks=new T.BufferGeometry();sparks.setAttribute('position',new T.Float32BufferAttribute(rockPositions,3));sparks.setAttribute('color',new T.Float32BufferAttribute(rockColors,3));const shimmer=new T.PointsMaterial({size:.052,vertexColors:true,transparent:true,opacity:.8,blending:T.AdditiveBlending,depthWrite:false});scene.add(new T.Points(sparks,shimmer));
  const coralMats=['#fb7f91','#fd9c83','#f05c9e','#c2a3ff','#62bfae'].map(c=>material(c,c,.45));
  const bloomFloor=makeMarineFloorLife(T,scene,floor,rand);
- const swimWildlife=makeReefWildlife(T,scene);
+ const swimWildlife=makeReefWildlife(T,scene,{preview});
  const coralTime={value:0},branches=[];
  function branch(start,dir,length,depth,k){
   const bend=dir.clone().add(V((rand()-.5)*.45,.05,(rand()-.5)*.45)).normalize();
@@ -35,7 +35,7 @@ export function makeMarineDiscoveries(T,scene){
    branch(origin,fork,length*(.54+rand()*.22),depth-1,k);
   }
  }
- for(let i=0;i<37;i++){
+ for(let i=0;i<(preview?22:37);i++){
   const a=i*2.399,d=7+rand()*30,x=Math.cos(a)*d,z=Math.sin(a)*d-9;
   if([[16,-4],[-18,1],[5,19],[0,-22]].some(([u,v])=>Math.hypot(x-u,z-v)<5.8))continue;
   branch(V(x,floor(x,z)-.06,z),V((rand()-.5)*.35,1,(rand()-.5)*.35).normalize(),.69+rand()*.96,2,i%5);
@@ -46,8 +46,9 @@ export function makeMarineDiscoveries(T,scene){
   branches.filter(b=>b.k===k).forEach(({curve,r,depth})=>{
    const g=new T.TubeGeometry(curve,9,r,8,false).toNonIndexed();
    const p=g.attributes.position,uv=g.attributes.uv;
+   const centers=curve.getSpacedPoints(9);
    for(let i=0;i<p.count;i++){
-    const t=uv.getX(i),center=curve.getPointAt(t);
+    const t=uv.getX(i),center=centers[Math.round(t*9)];
     const taper=depth===0?Math.max(.035,Math.sqrt(1-t)):1-.50*t;
     const texture=1+.11*Math.sin(t*57+uv.getY(i)*41);
     positions.push(center.x+(p.getX(i)-center.x)*taper*texture,center.y+(p.getY(i)-center.y)*taper*texture,center.z+(p.getZ(i)-center.z)*taper*texture);

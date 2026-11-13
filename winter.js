@@ -1,10 +1,31 @@
-import {createSeasonPortal} from './season-portal.js?v=projects-trail-controls-2';
+import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
+import {createPineGeometry,addSnowyBoughs} from './winter-pines.js';
+import {createSeasonPortal} from './season-portal.js?v=resume-view-1';
 import * as THREE from './vendor/three.module.js';
-import {createSnowmanHome} from './snowman-home.js?v=fast-home-1';
+import {createSnowmanHome} from './snowman-home.js?v=resume-view-1';
 import {createGardenCrossing} from './garden-crossing.js?v=trail-controls-2';
 import {playSnowSquall} from './snow-squall.js?v=2';
 import {createAboutStop} from './about-stop.js?v=igloo-entry-4';
 let aboutStop=null,seasonPortal=null,winterApproach=0;
+const restoredView=history.state?.portfolioView;
+const restoredSection=['about','projects','skills'].includes(restoredView?.section)?restoredView.section:null;
+const restoredWorld=[0,1,2].includes(restoredView?.world)?restoredView.world:0;
+history.scrollRestoration='manual';
+window.scrollTo({top:0,behavior:'instant'});
+let pendingSection=null,lastViewKey=null;
+const sectionButtons=[...document.querySelectorAll('[data-section]')];
+function updateCurrentView(){
+ const section=pendingSection??(snowmanHome.active?'home':seasonPortal.section);
+ const world=snowmanHome.world;
+ const viewKey=section+'/'+world;
+ if(viewKey===lastViewKey)return;
+ lastViewKey=viewKey;
+ for(const button of sectionButtons){
+  if(button.dataset.section===section)button.setAttribute('aria-current','page');
+  else button.removeAttribute('aria-current');
+ }
+ history.replaceState({...history.state,portfolioView:{section,world}},'');
+}
 
 const canvas=document.querySelector('#world');
 const compact=matchMedia('(pointer: coarse)').matches || innerWidth<700;
@@ -26,8 +47,7 @@ const iron=new THREE.MeshStandardMaterial({color:'#202831',roughness:.56,metalne
 const timber=new THREE.MeshStandardMaterial({color:'#655048',map:barkMap,roughness:.86});
 const stone=new THREE.MeshStandardMaterial({color:'#727c85',map:stoneMap,bumpMap:stoneMap,bumpScale:.13,roughness:.96});
 const glowMat=new THREE.MeshStandardMaterial({color:'#ffdf9b',emissive:'#ff9c41',emissiveIntensity:2.2,roughness:.2});
-const foliageCone=new THREE.ConeGeometry(1,1,16,3);const foliagePos=foliageCone.attributes.position;for(let i=0;i<foliagePos.count;i++){const y=foliagePos.getY(i);if(y<.49){const jitter=rand(.85,1.12);foliagePos.setX(i,foliagePos.getX(i)*jitter);foliagePos.setZ(i,foliagePos.getZ(i)*jitter);foliagePos.setY(i,y+rand(-.06,.06));}}foliageCone.computeVertexNormals();
-const boughGeo=new THREE.SphereGeometry(1,8,4);
+const pineGeometry=createPineGeometry(THREE,rand);
 const sphere=new THREE.SphereGeometry(1,12,8),cylinder=new THREE.CylinderGeometry(1,1,1,8),cube=new THREE.BoxGeometry(1,1,1);
 const batches=new Map();const dummy=new THREE.Object3D();
 function instance(geo,mat,x,y,z,sx=1,sy=sx,sz=sx,rx=0,ry=0,rz=0){const key=geo.uuid+mat.uuid+':'+Math.floor(z/32);if(!batches.has(key))batches.set(key,{geo,mat,matrices:[]});dummy.position.set(x,y,z);dummy.rotation.set(rx,ry,rz);dummy.scale.set(sx,sy,sz);dummy.updateMatrix();batches.get(key).matrices.push(dummy.matrix.clone());}
@@ -44,7 +64,13 @@ const pathV=[],pathI=[];for(let i=0;i<=500;i++){const d=-35+i*.55,p=path(d);for(
 // Rough footprints compress the snow along the path.
 const printMat=new THREE.MeshStandardMaterial({color:'#99aec4',roughness:1,transparent:true,opacity:.38});for(let d=-5;d<220;d+=.8){const p=path(d),s=Math.floor(d/.8)%2?1:-1;ball(printMat,p.x+s*.28,.022,-d,.115,.009,.25)}
 // Branch-level evergreen geometry with irregular snow resting on each bough.
-function pine(x,z,h){if(z>-64&&z<-28&&x>-10&&x<12)return;const y=height(x,z);beam(bark,new THREE.Vector3(x,y,z),new THREE.Vector3(x,y+h,z),.12+h*.009);const levels=11;for(let row=0;row<levels;row++){const t=row/(levels-1),yy=y+h*(.12+t*.79),radius=h*(.24*(1-t)+.018),depth=h*(.17-t*.055);instance(foliageCone,needles,x,yy,z,radius,depth,radius,0,row*.67);instance(foliageCone,branchSnow,x,yy+depth*.16,z,radius*.94,depth*.91,radius*.94,0,row*.67);for(let j=0;j<7;j++){const a=j*Math.PI*2/7+row*.61,len=radius*rand(.82,1.13);const bx=x+Math.cos(a)*len*.69,bz=z+Math.sin(a)*len*.69;instance(boughGeo,branchSnow,bx,yy-depth*.16,bz,len*.19,depth*.16,len*.39,.08,-a+Math.PI/2,rand(-.1,.1));}}ball(branchSnow,x,y+h*.99,z,.18,.4,.18)}
+function pine(x,z,h){
+ if(z>-64&&z<-28&&x>-10&&x<12)return;
+ const y=height(x,z);
+ beam(bark,new THREE.Vector3(x,y,z),new THREE.Vector3(x,y+h,z),.12+h*.009);
+ addSnowyBoughs({x,y,z,h,geometry:pineGeometry,needles,snow:branchSnow,instance,rand});
+ ball(branchSnow,x,y+h*.99,z,.18,.4,.18);
+}
 for(let i=0;i<112;i++){const d=rand(-25,245),p=path(d),side=i%2?1:-1;const x=p.x+side*rand(6.8,95);if(x>5&&x<22&&d>40&&d<170)continue;pine(x,-d,rand(9,21))}
 // Bare trees create a fine, overlapping canopy along the promenade.
 function bareTree(x,z,h){if(z>-64&&z<-28&&x>-10&&x<12)return;const y=height(x,z);beam(bark,new THREE.Vector3(x,y,z),new THREE.Vector3(x+.3,y+h,z),.19);for(let i=0;i<9;i++){const a=i*2.4,yy=y+h*(.35+i*.06),origin=new THREE.Vector3(x,yy,z),end=new THREE.Vector3(x+Math.cos(a)*h*.27,yy+h*.18,z+Math.sin(a)*h*.27);beam(bark,origin,end,.07);beam(branchSnow,origin.clone().add(new THREE.Vector3(0,.12,0)),end.clone().add(new THREE.Vector3(0,.12,0)),.055);for(let j=0;j<3;j++){const tip=end.clone().add(new THREE.Vector3(Math.cos(a+j)*h*.13,h*.13,Math.sin(a+j)*h*.13));beam(bark,end,tip,.025);beam(branchSnow,end.clone().add(new THREE.Vector3(0,.06,0)),tip.clone().add(new THREE.Vector3(0,.06,0)),.022);for(let k=0;k<2;k++){const twig=tip.clone().add(new THREE.Vector3(Math.cos(a+k)*.8,.8,Math.sin(a-k)*.8));beam(bark,tip,twig,.012);}}}}
@@ -83,8 +109,8 @@ const iceBlock=new THREE.MeshStandardMaterial({color:'#dbe8f0',roughness:.86});c
 function igloo(d,side= -1){const p=path(d),x=p.x+side*8,z=-d,y=height(x,z),r=3.1;for(let row=0;row<7;row++){const theta0=row/7*Math.PI/2+.009,theta1=Math.PI/14-.018;const pieces=Math.max(5,Math.round(24*Math.sin(theta0+theta1*.5)));for(let j=0;j<pieces;j++){const phi=j*Math.PI*2/pieces+(row%2)*Math.PI/pieces;const g=new THREE.SphereGeometry(r,5,3,phi+.012,Math.PI*2/pieces-.024,theta0,theta1);const o=object(g,iceBlock,x,y,z);o.castShadow=false;}}const tunnel=object(new THREE.CylinderGeometry(.95,.95,2.5,20,1,true,0,Math.PI),iceBlock,x,y+.05,z+3);tunnel.rotation.x=Math.PI/2;tunnel.rotation.z=Math.PI/2;const front=object(new THREE.CircleGeometry(.83,24),entranceMat,x,y+.65,z+4.28);front.scale.y=1.1;const lip=object(new THREE.TorusGeometry(.93,.2,7,24,Math.PI),branchSnow,x,y+.1,z+4.3);const light=new THREE.PointLight('#ffc77f',6,8,2);light.position.set(x,y+.8,z+3.5);scene.add(light);ball(branchSnow,x,y-.05,z+4,1.5,.15,2);}
 igloo(13);igloo(55);igloo(127);
 // Aurora curtains are shader-lit translucent ribbons with continuously changing folds.
-const auroraUniforms={time:{value:0}};const auroraMat=new THREE.ShaderMaterial({uniforms:auroraUniforms,transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,vertexShader:`uniform float time;varying vec2 vUv;varying float fold;void main(){vUv=uv;vec3 p=position;float w=sin(p.x*.027+time*.11)+sin(p.x*.061-time*.07)*.45;p.z+=w*16.;p.y+=sin(p.x*.019+time*.12)*19.+sin(p.x*.046-time*.07)*8.;fold=w;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,fragmentShader:`uniform float time;varying vec2 vUv;varying float fold;void main(){float streak=pow(.5+.5*sin(vUv.x*630.+sin(vUv.x*117.+time*.12)*5.),3.);float band=sin(vUv.y*3.14159);float shift=.12*sin(vUv.x*9.+time*.09)+.07*sin(vUv.x*21.-time*.08);float yy=vUv.y+shift;float edge=smoothstep(.01,.14,yy)*(1.-smoothstep(.16,.85,yy));float across=smoothstep(0.,.13,vUv.x)*(1.-smoothstep(.82,1.,vUv.x));vec3 green=vec3(.12,.88,.49);vec3 purple=vec3(.57,.26,.88);float hue=clamp(smoothstep(.10,.59,vUv.y)+sin(vUv.x*9.+time*.09)*.17,0.,1.);vec3 col=mix(green,purple,hue);float boundary=smoothstep(0.,.12,vUv.y)*(1.-smoothstep(.8,1.,vUv.y));float pulse=.52+.48*sin(time*.24+sin(vUv.x*5.)*.65);float a=(.10+streak*.07)*edge*across*boundary*(.45+pulse*.9);gl_FragColor=vec4(col,a);}`});
-for(let i=0;i<3;i++){const ribbon=object(new THREE.PlaneGeometry(900,135,180,12),auroraMat,i*50-100,380+i*28,-650-i*70);ribbon.rotation.z=-.16+i*.1;ribbon.castShadow=false;}
+const {aurora:trailAurora,time:trailAuroraTime}=createAurora(THREE);
+scene.add(trailAurora);
 const starGeo=new THREE.BufferGeometry(),starPos=[];for(let i=0;i<1800;i++){const a=rand(0,Math.PI*2),e=rand(.15,1.5),r=650;starPos.push(Math.cos(a)*Math.cos(e)*r,Math.sin(e)*r,Math.sin(a)*Math.cos(e)*r)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPos,3));const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:'#e0ecff',size:.65,transparent:true,opacity:.75,fog:false,sizeAttenuation:true}));scene.add(stars);
 // Batched props retain close-up detail while keeping the number of draw calls low.
 for(const batch of batches.values()){const inst=new THREE.InstancedMesh(batch.geo,batch.mat,batch.matrices.length);batch.matrices.forEach((m,i)=>inst.setMatrixAt(i,m));inst.castShadow=batch.mat!==glowMat;inst.receiveShadow=true;inst.computeBoundingSphere();scene.add(inst)}
@@ -121,6 +147,7 @@ document.body.append(portalStatus);
 let gardenEntrance;
 async function openLandscape(key){
  cancelNavTransition();
+ pendingSection=key;
  const generation=portalGeneration;
  portalStatus.textContent=key==='skills'?'Preparing the reef…':'Preparing the garden…';
  const floral=key==='projects'&&!reduced;
@@ -146,11 +173,13 @@ async function openLandscape(key){
   window.scrollTo({top:0,behavior:'instant'});
   snowmanHome.setActive(false);aboutStop.dismissImmediately();
   if(key==='skills')seasonPortal.enterMarine();else seasonPortal.enterGarden(floral?gardenEntrance:null);
+  pendingSection=null;
   navTransition=null;
   document.body.classList.remove('garden-departure');
   portalStatus.hidden=true;
  }catch(error){
   if(generation!==portalGeneration)return;
+  pendingSection=null;
   navTransition?.kill();navTransition=null;gardenEntrance?.hide();
   document.body.classList.remove('garden-departure');portalStatus.hidden=false;
   portalStatus.textContent='Could not load this landscape. Select it again to retry.';
@@ -158,16 +187,18 @@ async function openLandscape(key){
  }
 }
 // Each implemented portfolio destination owns its arrival approach.
-const snowmanHome=createSnowmanHome({renderer,reduced,winterScene:scene,onVisibility:active=>{team.visible=sled.visible=!active;},onFrame:(dt,t)=>{auroraUniforms.time.value=t;for(const field of snowFields)field.points.visible=false;},onExplore:button=>enterWinter(button)});
+const snowmanHome=createSnowmanHome({renderer,reduced,initialWorld:restoredWorld,winterScene:scene,onVisibility:active=>{team.visible=sled.visible=!active;},onFrame:(dt,t)=>{for(const field of snowFields)field.points.visible=false;},onExplore:button=>enterWinter(button),onProjects:()=>openLandscape('projects'),onSkills:()=>openLandscape('skills')});
 let navTransition=null,navShade=null;
 const stopStormScroll=event=>{if(document.querySelector(".snow-squall"))event.preventDefault();};
 addEventListener("wheel",stopStormScroll,{passive:false});
 addEventListener("touchmove",stopStormScroll,{passive:false});
-function cancelNavTransition(){portalGeneration++;gardenEntrance?.hide();document.body.classList.remove('garden-departure');portalStatus.hidden=true;navTransition?.kill();navShade?.remove();navTransition=navShade=null;winterApproach=0;}
+function cancelNavTransition(){pendingSection=null;portalGeneration++;gardenEntrance?.hide();document.body.classList.remove('garden-departure');portalStatus.hidden=true;navTransition?.kill();navShade?.remove();navTransition=navShade=null;winterApproach=0;}
 function enterWinter(button){
  if(navTransition)return;
  cancelNavTransition();
+ pendingSection='about';
  const arrive=()=>{
+  pendingSection=null;
   aboutStop.resetJourney();seasonPortal?.cancel();
   target=current=0;lastD=2;snowmanHome.setActive(false);
   window.scrollTo({top:0,behavior:'instant'});
@@ -182,18 +213,20 @@ function quickHome(){cancelNavTransition();navShade=document.createElement('div'
 const portfolioDestinations={home:{available:true,arrive:quickHome},about:{available:true,arrive:enterWinter},projects:{available:true,arrive:()=>openLandscape('projects')},skills:{available:true,arrive:()=>openLandscape('skills')},contact:{available:false}};
 document.querySelectorAll('[data-section]').forEach(button=>{button.onclick=()=>{const key=button.dataset.section,destination=portfolioDestinations[key];if(!destination?.available)return;if(key==='home'){quickHome();return;}if(key==='projects'||key==='skills'){destination.arrive();return;}if(!navTransition)destination.arrive(button);};});
 document.querySelector('header .brand').onclick=e=>{e.preventDefault();quickHome();};
-function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden)return;if(!paused)time+=dt;const activeSection=aboutStop.active?'about':seasonPortal?.inMarine?'skills':seasonPortal?.scene?'projects':snowmanHome.active?'home':'about';document.querySelectorAll('[data-section]').forEach(b=>{if(b.dataset.section===activeSection)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});const roomScene=aboutStop.interiorScene;
+function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden)return;if(!paused)time+=dt;const roomScene=aboutStop.interiorScene;
  if(aboutStop.reading||aboutStop.complete)seasonPortal.prefetch();
  const desiredRatio=Math.min(devicePixelRatio,roomScene?1.75:compact?.85:1.5);
  if(renderer.getPixelRatio()!==desiredRatio)renderer.setPixelRatio(desiredRatio);
- if(snowmanHome.active){snowmanHome.tick(dt,time);gardenEntrance?.render(renderer);return;}
+ if(snowmanHome.active){snowmanHome.tick(dt,time,raw);updateCurrentView();gardenEntrance?.render(renderer);return;}
  if(roomScene&&!seasonPortal?.active){
   aboutStop.tick(dt,time,Math.min(raw,.75));
+  updateCurrentView();
   renderer.render(aboutStop.interiorScene??scene,camera);
   gardenEntrance?.render(renderer);
   return;
  }current=target;const d=2+current*192,p=path(d),ahead=path(d+18);const moving=clamp(Math.abs(d-lastD)/Math.max(dt,.001)/1.2,0,1);lastD=d;const gait=reduced?0:Math.sin(d*5)*.025*moving;
  const cameraPath=path(d-winterApproach);camera.position.set(cameraPath.x,2.8+gait*.25,cameraPath.z);camera.lookAt(ahead.x,3.1+current*.8,ahead.z);const teamP=path(d+6.8),teamNext=path(d+10);team.position.set(teamP.x,0,teamP.z);team.rotation.y=Math.atan2(-(teamNext.x-teamP.x),-(teamNext.z-teamP.z));locomotion=THREE.MathUtils.damp(locomotion,moving,4,dt);if(!paused)stride+=dt*5.2*locomotion;animalLegs.forEach(({pivot,knee,phase})=>{const cycle=stride+phase;pivot.rotation.x=reduced?0:Math.sin(cycle)*.29*locomotion;knee.rotation.x=reduced?0:Math.max(0,Math.cos(cycle))*.38*locomotion;});team.position.y=reduced?0:Math.sin(stride*2)*.006*locomotion;sled.rotation.z=reduced?0:Math.sin(d*2)*.004*moving;
  moon.position.set(p.x-65,85,p.z+35);moon.target.position.set(p.x,0,p.z-30);moon.target.updateMatrixWorld();if(Math.abs(d-shadowAt)>12){renderer.shadowMap.needsUpdate=true;shadowAt=d;}for(const lamp of lamps)lamp.light.visible=Math.abs(lamp.z-p.z)<40;for(const field of snowFields){field.points.position.set(p.x,0,p.z);if(!paused){const a=field.points.geometry.attributes.position.array;for(let i=0;i<field.speeds.length;i++){a[i*3]+=dt*(.35+Math.sin(time*.35+i)*.2);a[i*3+1]-=dt*field.speeds[i];if(a[i*3+1]<-.3){a[i*3+1]=18;a[i*3]=rand(-30,30)}if(a[i*3]>32)a[i*3]=-32;}field.points.geometry.attributes.position.needsUpdate=true;}}
- auroraUniforms.time.value=time;waterUniforms.time.value=time;setZone(current<.31?0:current<.69?1:2);document.body.classList.toggle('walking',current>.035);if(!document.body.classList.contains('garden-departure')&&!seasonPortal?.active&&!aboutStop.active&&!aboutStop.complete&&target>=aboutStop.gate)target=aboutStop.check(target,current);if(!seasonPortal?.active)aboutStop.tick(dt,time,Math.min(raw,.75));seasonPortal?.check(current);seasonPortal?.tick(dt,time,Math.min(raw,.12));if(seasonPortal?.hideTeam){team.visible=false;sled.visible=false;}else if(!aboutStop.active){team.visible=true;sled.visible=true;}for(const field of snowFields)field.points.visible=!aboutStop.active&&!seasonPortal?.hideTeam;renderer.render(seasonPortal?.scene||aboutStop.interiorScene||scene,camera);if(!seasonPortal?.renderCrossing(gardenEntrance))gardenEntrance?.render(renderer);frames++;elapsed+=raw;if(frames%90===0)document.body.dataset.performance=JSON.stringify({fps:Math.round(frames/elapsed),draws:renderer.info.render.calls,triangles:renderer.info.render.triangles,progress:current});}
+ trailAuroraTime.value=reduced?0:time;waterUniforms.time.value=time;setZone(current<.31?0:current<.69?1:2);document.body.classList.toggle('walking',current>.035);if(!document.body.classList.contains('garden-departure')&&!seasonPortal?.active&&!aboutStop.active&&!aboutStop.complete&&target>=aboutStop.gate)target=aboutStop.check(target,current);if(!seasonPortal?.active)aboutStop.tick(dt,time,Math.min(raw,.75));seasonPortal?.check(current);seasonPortal?.tick(dt,time,Math.min(raw,.12));if(seasonPortal?.hideTeam){team.visible=false;sled.visible=false;}else if(!aboutStop.active){team.visible=true;sled.visible=true;}for(const field of snowFields)field.points.visible=!aboutStop.active&&!seasonPortal?.hideTeam;updateCurrentView();renderer.render(seasonPortal?.scene||aboutStop.interiorScene||scene,camera);if(!seasonPortal?.renderCrossing(gardenEntrance))gardenEntrance?.render(renderer);frames++;elapsed+=raw;if(frames%90===0)document.body.dataset.performance=JSON.stringify({fps:Math.round(frames/elapsed),draws:renderer.info.render.calls,triangles:renderer.info.render.triangles,progress:current});}
+if(restoredSection)portfolioDestinations[restoredSection].arrive(sectionButtons.find(button=>button.dataset.section===restoredSection));
 animate();addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();scrollUpdate()});gsap.to('#loading',{opacity:0,duration:.22,onComplete:()=>document.querySelector('#loading').remove()});

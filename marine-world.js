@@ -1,11 +1,11 @@
-import {makeMarineDiscoveries} from './marine-discoveries.js';
+import {makeMarineDiscoveries} from './marine-discoveries.js?v=oyster-home-1';
 import {makeMarineLife} from './marine-life.js';
 import {makeFishSchool} from './marine-fish.js';
-import {marineCreatures} from './marine-creatures.js';
+import {marineCreatures} from './marine-creatures.js?v=oyster-home-2';
 
 import {reefSkills as skills,peopleSkills,treeSkills as branchSkills} from './marine-skills.js';
 
-export function createMarineWorld(T,camera,onReturn){
+export function createMarineWorld(T,camera,onReturn,{preview=false}={}){
  const scene=new T.Scene();scene.background=new T.Color('#020b29');scene.fog=new T.FogExp2('#061649',.024);
  const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
  scene.add(new T.HemisphereLight('#5b85ff','#120d35',1.2));
@@ -20,10 +20,10 @@ export function createMarineWorld(T,camera,onReturn){
  for(const [x,z,color,intensity] of lightPatches){const lamp=new T.SpotLight(color,intensity,32,.32,.66,2);lamp.position.set(x-1.5,12,z+1.5);lamp.target.position.set(x,-4,z);scene.add(lamp,lamp.target);
  if(x!==-3){const shaft=beam.clone();shaft.material=beam.material.clone();shaft.material.uniforms.clock=beam.material.uniforms.clock;shaft.position.set(x,7.6,z);shaft.rotation.z=x>0?.19:-.16;shaft.scale.set(.68,1,.68);scene.add(shaft);}}
 
- const discoveries=makeMarineDiscoveries(T,scene),creature=marineCreatures(T,scene),dummy=new T.Object3D();let seed=121;const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646;
+ const discoveries=makeMarineDiscoveries(T,scene,{preview}),creature=marineCreatures(T,scene,{preview}),dummy=new T.Object3D();let seed=121;const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646;
  function eroded(geo,amount){const p=geo.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),r=1+amount*(Math.sin(x*19+y*9+z*5)+Math.cos(z*17+x*6-y*12))*.5;p.setXYZ(i,x*r,y*r,z*r);}geo.computeVertexNormals();return geo;}
  const corners=[[-25,-36],[25,-36],[-25,14],[25,14]];
- const rockCount=290;
+ const rockCount=preview?155:290;
  const rock=new T.InstancedMesh(eroded(new T.SphereGeometry(1,26,18),.145),new T.MeshStandardMaterial({color:'#344554',roughness:1}),rockCount);
  const palette=['#f15f97','#9052d8','#39d2a9','#ef9958','#5ea9df'].map(c=>new T.Color(c));
  const patches=[];for(let i=0;i<rockCount;i++){
@@ -36,20 +36,30 @@ export function createMarineWorld(T,camera,onReturn){
  const branches=[],spongeGeo=new T.CylinderGeometry(.28,.20,1.35,14,4,true);
  const sponge=new T.InstancedMesh(spongeGeo,new T.MeshStandardMaterial({color:'#b87975',side:T.DoubleSide,roughness:.93}),155);
  function fan(p,v,length,depth,color){const end=p.clone().addScaledVector(v,length);branches.push({p,end,r:.055*Math.pow(.72,3-depth),color});if(depth>0)for(const sign of [-1,1])fan(end,V(v.x+sign*(.48+rnd()*.22),.8+rnd()*.3,v.z+sign*(rnd()-.5)*.42).normalize(),length*(.61+rnd()*.13),depth-1,color);}
- for(let i=0;i<70;i++){const p=patches[i*3],color=palette[i%palette.length];fan(V(p.x,-4+p.sz*.4,p.z),V((rnd()-.5)*.55,1,(rnd()-.5)*.36).normalize(),.62+rnd()*.52,3,color);}
+ for(let i=0;i<(preview?48:70);i++){const p=patches[(i*3)%rockCount],color=palette[i%palette.length];fan(V(p.x,-4+p.sz*.4,p.z),V((rnd()-.5)*.55,1,(rnd()-.5)*.36).normalize(),.62+rnd()*.52,3,color);}
  const fans=new T.InstancedMesh(new T.CylinderGeometry(.60,1,1,6),new T.MeshStandardMaterial({color:'#fff',roughness:.72}),branches.length),axis=V(0,1,0);
  branches.forEach(({p,end,r,color},i)=>{const d=end.clone().sub(p);dummy.position.copy(p).lerp(end,.5);dummy.quaternion.setFromUnitVectors(axis,d.clone().normalize());dummy.scale.set(r,d.length(),r);dummy.updateMatrix();fans.setMatrixAt(i,dummy.matrix);fans.setColorAt(i,color);});
- for(let i=0;i<155;i++){const p=patches[(i*11)%210];dummy.position.set(p.x+(rnd()-.5)*p.sz,-4+p.sz*.45,p.z+(rnd()-.5)*p.sz);dummy.rotation.set((rnd()-.5)*.55,rnd()*6,(rnd()-.5)*.6);dummy.scale.set(.48+rnd()*.43,.35+rnd()*.65,.48+rnd()*.43);dummy.updateMatrix();sponge.setMatrixAt(i,dummy.matrix);}scene.add(fans,sponge);
+ for(let i=0;i<155;i++){const p=patches[(i*11)%Math.min(210,rockCount)];dummy.position.set(p.x+(rnd()-.5)*p.sz,-4+p.sz*.45,p.z+(rnd()-.5)*p.sz);dummy.rotation.set((rnd()-.5)*.55,rnd()*6,(rnd()-.5)*.6);dummy.scale.set(.48+rnd()*.43,.35+rnd()*.65,.48+rnd()*.43);dummy.updateMatrix();sponge.setMatrixAt(i,dummy.matrix);}scene.add(fans,sponge);
  const specks=new Float32Array(660*3);for(let i=0;i<specks.length;i+=3)specks.set([(rnd()-.5)*85,rnd()*20-4,-rnd()*65+8],i);const dustGeo=new T.BufferGeometry();dustGeo.setAttribute('position',new T.BufferAttribute(specks,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:'#9bdaf3',size:.065,transparent:true,opacity:.42,depthWrite:false}));scene.add(dust);
  const fishRoutes=[
   [-5,-10,1.8,10],[6,5,2.2,8],[-15,-16,2.4,7],[15,-15,.9,7],
   [0,-30,3.3,8],[-21,-2,3.8,6],[22,-1,2.5,6],[0,16,3.4,6],
   ...corners.map(([x,z],i)=>[x,z,1.1+i*.7,7])
  ];
- const schools=fishRoutes.map(([x,z,height,count],i)=>makeFishSchool(T,scene,rnd,{
+ const schools=(preview?fishRoutes.slice(0,7):fishRoutes).map(([x,z,height,count],i)=>makeFishSchool(T,scene,rnd,{
   x,z,height,count,radius:i<2?.65:.86,paletteOffset:i
  }));
  const life=makeMarineLife(T,scene,rnd,corners);
+
+ function animateReef(dt,t){
+  seabed.uniforms.clock.value=beam.material.uniforms.clock.value=t;
+  dust.position.y=Math.sin(t*.19)*.52;
+  creature.tick(t,dt);
+  schools.forEach((swim,i)=>swim(t+i*2.7,camera.position));
+  life.tick(t);
+  discoveries.tick(t,dt,camera.position);
+ }
+ if(preview)return {scene,creature,tick:animateReef};
 
  const hud=document.createElement('section');hud.id='marineHud';hud.hidden=true;hud.setAttribute('aria-label','Underwater skills');hud.innerHTML=`<div class="marine-top"><span>03 / UNDERWATER</span><button data-map aria-label="Reef map" aria-controls="reef-map" aria-expanded="false"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15m6-12v15"/></svg> <span class="reef-map-label">Map</span></button><button data-all>View all skills</button><button data-zoom="in" aria-label="Zoom in">+</button><button data-zoom="out" aria-label="Zoom out">−</button><button data-return>Return to garden</button></div><div class="marine-intro"><small>THE LIVING REEF</small><h1>A deeper<br><em>curiosity.</em></h1><p>Drag to look in any direction<br>Scroll, arrows, WASD or the stick to swim · Ctrl + scroll to zoom</p></div><div class="marine-markers"></div><div class="marine-map" id="reef-map" hidden></div><aside class="marine-card" hidden aria-label="Skill encounter"></aside><div class="marine-touch"><button class="marine-stick" aria-label="Drag to swim"><i></i></button><span>SWIM<br>↑ ↓ ← →</span></div>`;
  document.body.append(hud);
@@ -141,8 +151,7 @@ export function createMarineWorld(T,camera,onReturn){
  addEventListener('wheel',e=>{if(!active||e.target.closest?.('.marine-card,.marine-map'))return;e.preventDefault();if(e.ctrlKey||e.metaKey){zoom(e.deltaY*.065);return;}interrupt();const factor=e.deltaMode===1?16:e.deltaMode===2?innerHeight:1;wheelCurrent.add(V(e.deltaX*factor*.029,0,-e.deltaY*factor*.029).applyEuler(look)).clampLength(0,16);},{passive:false});
  const direction=V(),screen=V(),ray=new T.Raycaster(),hit=new T.Vector3();
  return {scene,enter(preserve=false){active=true;targetFov=66;hud.hidden=false;document.body.classList.add('in-marine');if(preserve){pos.copy(camera.position);look.setFromQuaternion(camera.quaternion,'YXZ');look.z=0;}else{pos.set(0,2.8,8);look.set(0,0,0);}near=-1;interacted=false;intro.hidden=false;setMap(false);closeCard();clearMovement();document.activeElement?.blur();},leave(){active=false;hud.hidden=true;document.body.classList.remove('in-marine');creature.cursor(null);interrupt();clearMovement();closeCard();setMap(false);},tick(dt,t){
- seabed.uniforms.clock.value=beam.material.uniforms.clock.value=t;dust.position.y=Math.sin(t*.19)*.52;creature.tick(t,dt);
- schools.forEach((swim,i)=>swim(t+i*2.7,camera.position));life.tick(t);discoveries.tick(t,dt,camera.position);
+ animateReef(dt,t);
  direction.set(Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft')),Number(keys.has('Space'))-Number(keys.has('KeyC')),Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp')));
  direction.x+=axisInput.x;direction.z+=axisInput.y;if(direction.length()>1)direction.normalize();direction.multiplyScalar(7).applyEuler(look);velocity.lerp(direction,1-Math.exp(-dt*6));if(!glide)pos.addScaledVector(velocity,dt).addScaledVector(wheelCurrent,dt);wheelCurrent.multiplyScalar(Math.exp(-dt*5.5));pos.clamp(V(-31,-2.6,-44),V(31,12,23));
  camera.position.copy(pos);camera.rotation.copy(look);if(active&&Math.abs(camera.fov-targetFov)>.03){camera.fov=T.MathUtils.damp(camera.fov,targetFov,10,dt);camera.updateProjectionMatrix();}camera.updateMatrixWorld(true);
