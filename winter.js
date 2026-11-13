@@ -1,7 +1,9 @@
+import {createSeasonPortal} from './season-portal.js?v=projects-trail-controls-2';
 import * as THREE from './vendor/three.module.js';
 import {createSnowmanHome} from './snowman-home.js?v=fast-home-1';
+import {createGardenCrossing} from './garden-crossing.js?v=trail-controls-2';
 import {playSnowSquall} from './snow-squall.js?v=2';
-import {createAboutStop} from './about-stop.js?v=fast-letter-2';
+import {createAboutStop} from './about-stop.js?v=igloo-entry-4';
 let aboutStop=null,seasonPortal=null,winterApproach=0;
 
 const canvas=document.querySelector('#world');
@@ -102,41 +104,55 @@ const strap=new THREE.Mesh(new THREE.TorusGeometry(.4,.035,6,24),leather);strap.
 reindeer(-1);reindeer(1);for(const side of [-1,1]){const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(side*.85,1.35,-.35),new THREE.Vector3(side*.85,1.07,1.7),new THREE.Vector3(side*.65,1.1,6.0)]);const rein=new THREE.Mesh(new THREE.TubeGeometry(curve,24,.016,5,false),leather);team.add(rein);}const carriedLight=new THREE.PointLight('#ffc388',1.5,6,2);carriedLight.position.set(0,-.8,-1);camera.add(carriedLight);
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;let paused=reduced,target=0,current=0,time=0,lastD=0,zone=-1,modal=false;const clock=new THREE.Clock();let frames=0,elapsed=0,shadowAt=-100,stride=0,locomotion=0;
 const zones=[{label:'THE SNOWFALL WALK',name:'The promenade',title:'Somewhere<br>between <em>snow & stars.</em>',eyebrow:'WINTER / A WORLD IN THE MAKING',intro:'A sleigh through the snow. Two companions. A sky full of possibilities.',cta:'A note from Isha',landmark:'A note by the lantern',sub:'Follow the lamps into the forest.'},{label:'THE LANTERN VILLAGE',name:'The winter village',title:'Warm lights.<br><em>Stories</em> within.',eyebrow:'WINTER / A PLACE TO BEGIN',intro:'Every window holds a story. This one is mine.',cta:'Open the winter journal',landmark:'The winter journal',sub:'A snowbound village beside the river.'},{label:'UNDER THE NORTHERN LIGHTS',name:'The aurora clearing',title:'Stay a little.<br><em>Look up.</em>',eyebrow:'WINTER / THE SKY IS ALIVE',intro:'The journey is as much about the things you notice along the way.',cta:'Open the field notes',landmark:'Notes from the clearing',sub:'Northern lights above. A river below.'}];
-function scrollUpdate(){target=clamp(scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight),0,1);if(aboutStop&&!seasonPortal?.scene)target=aboutStop.check(target,current);if(seasonPortal)target=seasonPortal.check(target);else if(aboutStop?.complete)target=Math.min(target,.315);document.querySelector('#progress').style.width=target*100+'%';}addEventListener('scroll',scrollUpdate,{passive:true});scrollUpdate();
+function scrollUpdate(){target=clamp(scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight),0,1);if(aboutStop&&!seasonPortal?.active&&!document.body.classList.contains('garden-departure'))target=aboutStop.check(target,current);if(seasonPortal)target=seasonPortal.check(target);document.querySelector('#progress').style.width=target*100+'%';}addEventListener('scroll',scrollUpdate,{passive:true});scrollUpdate();
 function setZone(n){if(n===zone)return;zone=n;const c=zones[n];document.querySelector('#chapterNum').textContent='0'+(n+1);document.querySelector('#seasonLabel').textContent=c.label;document.querySelector('#seasonName').textContent=c.name;document.querySelector('#seasonSub').textContent=c.sub;document.querySelector('#landmarkBtn').textContent=c.landmark+' ↗';document.querySelector('#eyebrow').textContent=c.eyebrow;document.querySelector('#title').innerHTML=c.title;document.querySelector('#intro').textContent=c.intro;document.querySelector('#explore').innerHTML=c.cta+' <span>↗</span>';document.querySelectorAll('.route button').forEach((b,i)=>b.classList.toggle('active',i===n));}
 const dialog=document.querySelector('#detail'),veil=document.querySelector('#veil');function close(){if(dialog.open)dialog.close();modal=false;veil.classList.remove('show');document.body.style.overflow='';}function open(content){document.querySelector('#detailContent').innerHTML=content;dialog.showModal();modal=true;veil.classList.add('show');document.body.style.overflow='hidden';gsap.fromTo(dialog,{opacity:0,x:25},{opacity:1,x:0,duration:.45});}function note(){close();aboutStop.enter();}document.querySelector('#explore').onclick=note;document.querySelector('#landmarkBtn').onclick=note;document.querySelector('#close').onclick=close;veil.onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();close()});
 function go(n){if(n===0){quickHome();return;}close();seasonPortal?.cancel();window.scrollTo({top:[0,.43,.87][n]*(document.documentElement.scrollHeight-innerHeight),behavior:reduced?'instant':'smooth'});}document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(+b.dataset.go));document.querySelector('#indexBtn').onclick=()=>{open('<span class="kicker">WINTER / THE FIELD GUIDE</span><h2>Take the<br>scenic route.</h2><p>Scroll to ride. Settle into the sleigh and follow two reindeer through the winter landscape.</p><button class="guide-btn" data-dest="0">01 &nbsp; Snowfall sleigh ride <span>↗</span></button><button class="guide-btn" data-dest="1">02 &nbsp; Lantern village <span>↗</span></button><button class="guide-btn" data-dest="2">03 &nbsp; Northern lights <span>↗</span></button><p class="note">Winter is the current focus. Autumn and spring are preserved in the earlier prototype.</p>');dialog.querySelectorAll('[data-dest]').forEach(b=>b.onclick=()=>go(+b.dataset.dest));};document.querySelector('#motionBtn').textContent=paused?'Resume snowfall ▷':'Pause snowfall Ⅱ';document.querySelector('#motionBtn').onclick=()=>{paused=!paused;document.querySelector('#motionBtn').textContent=paused?'Resume snowfall ▷':'Pause snowfall Ⅱ';};
 aboutStop=createAboutStop({THREE,scene,camera,team,sled,path,onResume(value){target=current=value;lastD=2+value*192;window.scrollTo({top:value*(document.documentElement.scrollHeight-innerHeight),behavior:'instant'});}});
-let portalRequest=null,portalGeneration=0,portalRetryAt=0;
-function loadSeasonPortal(){
- if(seasonPortal)return Promise.resolve(seasonPortal);
- portalRequest??=import('./season-portal.js?v=defer-1').then(({createSeasonPortal})=>{
-  seasonPortal=createSeasonPortal({THREE,renderer,camera,winterScene:scene,path,aboutStop,onWinterReturn(value){
-   target=current=value;lastD=2+value*192;
-   window.scrollTo({top:value*(document.documentElement.scrollHeight-innerHeight),behavior:'instant'});
-  }});
-  return seasonPortal;
- }).finally(()=>{portalRequest=null;});
- return portalRequest;
-}
+let portalGeneration=0;
+seasonPortal=createSeasonPortal({THREE,renderer,camera,winterScene:scene,path,aboutStop,onWinterReturn(value){
+ aboutStop.resumeFromPortal(value);
+ target=current=value;lastD=2+value*192;
+ window.scrollTo({top:value*(document.documentElement.scrollHeight-innerHeight),behavior:'instant'});
+}});
 const portalStatus=document.createElement('p');
 portalStatus.className='portal-load-status';portalStatus.setAttribute('role','status');portalStatus.hidden=true;
 document.body.append(portalStatus);
+let gardenEntrance;
 async function openLandscape(key){
  cancelNavTransition();
  const generation=portalGeneration;
  portalStatus.textContent=key==='skills'?'Preparing the reef…':'Preparing the garden…';
- portalStatus.hidden=false;
+ const floral=key==='projects'&&!reduced;
+ portalStatus.hidden=floral;
+ let cover=Promise.resolve();
+ if(key==='projects'){
+  document.body.classList.add('garden-departure');
+  aboutStop.dismissImmediately();
+ }
+ if(floral){
+  gardenEntrance??=createGardenCrossing();
+  gardenEntrance.show();
+  const opening={progress:0};
+  cover=new Promise(resolve=>{
+   navTransition=gsap.to(opening,{progress:.32,duration:1.14,ease:'none',
+    onUpdate:()=>gardenEntrance.paint(opening.progress),onComplete:resolve,onInterrupt:resolve});
+  });
+ }
  try{
-  const portal=await loadSeasonPortal();
+  await Promise.all([seasonPortal.prepare(key),cover]);
   if(generation!==portalGeneration)return;
-  await portal.prepare(key);
-  if(generation!==portalGeneration)return;
+  target=current=0;lastD=2;
+  window.scrollTo({top:0,behavior:'instant'});
   snowmanHome.setActive(false);aboutStop.dismissImmediately();
-  if(key==='skills')portal.enterMarine();else portal.enterGarden();
+  if(key==='skills')seasonPortal.enterMarine();else seasonPortal.enterGarden(floral?gardenEntrance:null);
+  navTransition=null;
+  document.body.classList.remove('garden-departure');
   portalStatus.hidden=true;
  }catch(error){
   if(generation!==portalGeneration)return;
+  navTransition?.kill();navTransition=null;gardenEntrance?.hide();
+  document.body.classList.remove('garden-departure');portalStatus.hidden=false;
   portalStatus.textContent='Could not load this landscape. Select it again to retry.';
   console.error(error);
  }
@@ -147,7 +163,7 @@ let navTransition=null,navShade=null;
 const stopStormScroll=event=>{if(document.querySelector(".snow-squall"))event.preventDefault();};
 addEventListener("wheel",stopStormScroll,{passive:false});
 addEventListener("touchmove",stopStormScroll,{passive:false});
-function cancelNavTransition(){portalGeneration++;portalStatus.hidden=true;navTransition?.kill();navShade?.remove();navTransition=navShade=null;winterApproach=0;}
+function cancelNavTransition(){portalGeneration++;gardenEntrance?.hide();document.body.classList.remove('garden-departure');portalStatus.hidden=true;navTransition?.kill();navShade?.remove();navTransition=navShade=null;winterApproach=0;}
 function enterWinter(button){
  if(navTransition)return;
  cancelNavTransition();
@@ -166,8 +182,18 @@ function quickHome(){cancelNavTransition();navShade=document.createElement('div'
 const portfolioDestinations={home:{available:true,arrive:quickHome},about:{available:true,arrive:enterWinter},projects:{available:true,arrive:()=>openLandscape('projects')},skills:{available:true,arrive:()=>openLandscape('skills')},contact:{available:false}};
 document.querySelectorAll('[data-section]').forEach(button=>{button.onclick=()=>{const key=button.dataset.section,destination=portfolioDestinations[key];if(!destination?.available)return;if(key==='home'){quickHome();return;}if(key==='projects'||key==='skills'){destination.arrive();return;}if(!navTransition)destination.arrive(button);};});
 document.querySelector('header .brand').onclick=e=>{e.preventDefault();quickHome();};
-function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden)return;if(!paused)time+=dt;const activeSection=aboutStop.active?'about':seasonPortal?.inMarine?'skills':seasonPortal?.scene?'projects':snowmanHome.active?'home':'about';document.querySelectorAll('[data-section]').forEach(b=>{if(b.dataset.section===activeSection)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});if(snowmanHome.active){snowmanHome.tick(dt,time);return;}current=THREE.MathUtils.damp(current,target,reduced?40:5,dt);const d=2+current*192,p=path(d),ahead=path(d+18);const moving=clamp(Math.abs(d-lastD)/Math.max(dt,.001)/1.2,0,1);lastD=d;const gait=reduced?0:Math.sin(d*5)*.025*moving;
+function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden)return;if(!paused)time+=dt;const activeSection=aboutStop.active?'about':seasonPortal?.inMarine?'skills':seasonPortal?.scene?'projects':snowmanHome.active?'home':'about';document.querySelectorAll('[data-section]').forEach(b=>{if(b.dataset.section===activeSection)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});const roomScene=aboutStop.interiorScene;
+ if(aboutStop.reading||aboutStop.complete)seasonPortal.prefetch();
+ const desiredRatio=Math.min(devicePixelRatio,roomScene?1.75:compact?.85:1.5);
+ if(renderer.getPixelRatio()!==desiredRatio)renderer.setPixelRatio(desiredRatio);
+ if(snowmanHome.active){snowmanHome.tick(dt,time);gardenEntrance?.render(renderer);return;}
+ if(roomScene&&!seasonPortal?.active){
+  aboutStop.tick(dt,time,Math.min(raw,.75));
+  renderer.render(aboutStop.interiorScene??scene,camera);
+  gardenEntrance?.render(renderer);
+  return;
+ }current=target;const d=2+current*192,p=path(d),ahead=path(d+18);const moving=clamp(Math.abs(d-lastD)/Math.max(dt,.001)/1.2,0,1);lastD=d;const gait=reduced?0:Math.sin(d*5)*.025*moving;
  const cameraPath=path(d-winterApproach);camera.position.set(cameraPath.x,2.8+gait*.25,cameraPath.z);camera.lookAt(ahead.x,3.1+current*.8,ahead.z);const teamP=path(d+6.8),teamNext=path(d+10);team.position.set(teamP.x,0,teamP.z);team.rotation.y=Math.atan2(-(teamNext.x-teamP.x),-(teamNext.z-teamP.z));locomotion=THREE.MathUtils.damp(locomotion,moving,4,dt);if(!paused)stride+=dt*5.2*locomotion;animalLegs.forEach(({pivot,knee,phase})=>{const cycle=stride+phase;pivot.rotation.x=reduced?0:Math.sin(cycle)*.29*locomotion;knee.rotation.x=reduced?0:Math.max(0,Math.cos(cycle))*.38*locomotion;});team.position.y=reduced?0:Math.sin(stride*2)*.006*locomotion;sled.rotation.z=reduced?0:Math.sin(d*2)*.004*moving;
  moon.position.set(p.x-65,85,p.z+35);moon.target.position.set(p.x,0,p.z-30);moon.target.updateMatrixWorld();if(Math.abs(d-shadowAt)>12){renderer.shadowMap.needsUpdate=true;shadowAt=d;}for(const lamp of lamps)lamp.light.visible=Math.abs(lamp.z-p.z)<40;for(const field of snowFields){field.points.position.set(p.x,0,p.z);if(!paused){const a=field.points.geometry.attributes.position.array;for(let i=0;i<field.speeds.length;i++){a[i*3]+=dt*(.35+Math.sin(time*.35+i)*.2);a[i*3+1]-=dt*field.speeds[i];if(a[i*3+1]<-.3){a[i*3+1]=18;a[i*3]=rand(-30,30)}if(a[i*3]>32)a[i*3]=-32;}field.points.geometry.attributes.position.needsUpdate=true;}}
- auroraUniforms.time.value=time;waterUniforms.time.value=time;setZone(current<.31?0:current<.69?1:2);document.body.classList.toggle('walking',current>.035);if(!seasonPortal?.scene&&!aboutStop.active&&!aboutStop.complete&&target>=aboutStop.gate)target=aboutStop.check(target,current);aboutStop.tick(dt,time,Math.min(raw,.75));if(aboutStop.complete&&!seasonPortal&&!portalRequest&&current>.245&&performance.now()>portalRetryAt){loadSeasonPortal().catch(error=>{portalRetryAt=performance.now()+5000;console.error(error);});}seasonPortal?.check(current);seasonPortal?.tick(dt,time);if(seasonPortal?.hideTeam){team.visible=false;sled.visible=false;}else if(!aboutStop.active){team.visible=true;sled.visible=true;}for(const field of snowFields)field.points.visible=!aboutStop.active&&!seasonPortal?.hideTeam;renderer.render(seasonPortal?.scene||scene,camera);frames++;elapsed+=raw;if(frames%90===0)document.body.dataset.performance=JSON.stringify({fps:Math.round(frames/elapsed),draws:renderer.info.render.calls,triangles:renderer.info.render.triangles,progress:current});}
+ auroraUniforms.time.value=time;waterUniforms.time.value=time;setZone(current<.31?0:current<.69?1:2);document.body.classList.toggle('walking',current>.035);if(!document.body.classList.contains('garden-departure')&&!seasonPortal?.active&&!aboutStop.active&&!aboutStop.complete&&target>=aboutStop.gate)target=aboutStop.check(target,current);if(!seasonPortal?.active)aboutStop.tick(dt,time,Math.min(raw,.75));seasonPortal?.check(current);seasonPortal?.tick(dt,time,Math.min(raw,.12));if(seasonPortal?.hideTeam){team.visible=false;sled.visible=false;}else if(!aboutStop.active){team.visible=true;sled.visible=true;}for(const field of snowFields)field.points.visible=!aboutStop.active&&!seasonPortal?.hideTeam;renderer.render(seasonPortal?.scene||aboutStop.interiorScene||scene,camera);if(!seasonPortal?.renderCrossing(gardenEntrance))gardenEntrance?.render(renderer);frames++;elapsed+=raw;if(frames%90===0)document.body.dataset.performance=JSON.stringify({fps:Math.round(frames/elapsed),draws:renderer.info.render.calls,triangles:renderer.info.render.triangles,progress:current});}
 animate();addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();scrollUpdate()});gsap.to('#loading',{opacity:0,duration:.22,onComplete:()=>document.querySelector('#loading').remove()});

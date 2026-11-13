@@ -1,7 +1,7 @@
 import {createGardenLakeside} from './garden-lakeside.js';
 import {createGardenBridge} from './garden-bridge.js';
 import {createProjectTreasures} from './project-treasures.js?v=auto-unroll-4';
-import {createGardenCarriage} from './garden-carriage.js?v=gallop-4';
+import {createGardenCarriage} from './garden-carriage.js?v=route-heading-1';
 export function createBotanicalGarden(THREE,camera){
  let seed=427;const rnd=()=>{seed=seed*16807%2147483647;return(seed-1)/2147483646},rand=(a,b)=>a+(b-a)*rnd();
  const scene=new THREE.Scene();scene.background=new THREE.Color('#a9d7e8');scene.fog=new THREE.FogExp2('#d3ddce',.0065);
