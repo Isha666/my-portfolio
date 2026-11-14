@@ -6,11 +6,11 @@ The current `index.html` loads `winter.js`: an eye-level walk along a snowy rive
 
 Winter includes procedural textured snow and bark, instanced branch-level firs and bare trees, snow-capped railings, benches, warm lantern lighting, a bridge, cabins, a fairy-lit snowman, footprints, three depths of falling snow, stars, distant ridgelines and shader-based aurora/water. No reference photograph is used as a flat background.
 
-The previous three-season environment is preserved in `index-v1.html`, `world-v1.js`, and `style-v1.css`. Its autumn and spring scenery has not yet received the winter realism treatment. Portfolio panels are simple placeholders; the elaborate physical component interactions and final personal content are not implemented yet.
+Earlier prototypes and preview screenshots are available in Git history.
 
 Dependencies are vendored; no installation required. The Coding Club app is unchanged.
 
-Latest winter revision: first-person sleigh with two animated harnessed reindeer, reins and a wooden front rail; heavy layered snow on full evergreen silhouettes; three snow-block igloos; displaced 3D mountain terrain with exposed-rock / snow vertex colours. The previous walking winter is retained in winter-v2.js.
+Latest winter revision: first-person sleigh with two animated harnessed reindeer, reins and a wooden front rail; heavy layered snow on full evergreen silhouettes; three snow-block igloos; displaced 3D mountain terrain with exposed-rock / snow vertex colours.
 
 View / atmosphere refinement: raised the sleigh eye position from 2.25m to 2.8m and moved the team farther ahead. Replaced broad rigid-leg swings with a slower, smoothed stride and articulated knees. Aurora ribbons sit high above the mountains with purple/green blending and a slow brightness cycle. Snow combines denser soft flakes with a separate six-armed crystal texture in the foreground.
 
