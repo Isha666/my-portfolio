@@ -1,5 +1,6 @@
+import {disposeScene} from './scene-resources.js';
 import * as T from './vendor/three.module.js';
-import {createMarineWorld} from './marine-world.js?v=home-reef-7';
+import {createMarineWorld} from './marine-world.js?v=jelly-colors-3';
 import {createMarineVortex} from './marine-vortex.js';
 
 export function createMarineHome(){
@@ -90,7 +91,7 @@ export function createMarineHome(){
  let open=.93;
  const badge=new T.Vector3(),gazePoint=new T.Vector3();
  let gazeX=0,gazeY=0;
- return {render(renderer,dt,t,x,y,portal,reduced,intro,idle){
+ return {dispose(){disposeScene(scene);},render(renderer,dt,t,x,y,portal,reduced,intro,idle){
   const aspect=innerWidth/innerHeight;
   const time=reduced?0:t;
   camera.aspect=aspect;

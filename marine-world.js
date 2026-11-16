@@ -1,11 +1,11 @@
 import {makeMarineDiscoveries} from './marine-discoveries.js?v=oyster-home-1';
 import {makeMarineLife} from './marine-life.js';
 import {makeFishSchool} from './marine-fish.js';
-import {marineCreatures} from './marine-creatures.js?v=oyster-home-2';
+import {marineCreatures} from './marine-creatures.js?v=reef-jaw-1';
 
 import {reefSkills as skills,peopleSkills,treeSkills as branchSkills} from './marine-skills.js';
 
-export function createMarineWorld(T,camera,onReturn,{preview=false}={}){
+export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}){
  const scene=new T.Scene();scene.background=new T.Color('#020b29');scene.fog=new T.FogExp2('#061649',.024);
  const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
  scene.add(new T.HemisphereLight('#5b85ff','#120d35',1.2));
@@ -54,10 +54,11 @@ export function createMarineWorld(T,camera,onReturn,{preview=false}={}){
  function animateReef(dt,t){
   seabed.uniforms.clock.value=beam.material.uniforms.clock.value=t;
   dust.position.y=Math.sin(t*.19)*.52;
-  creature.tick(t,dt);
+  const jaw=creature.tick(t,dt);
   schools.forEach((swim,i)=>swim(t+i*2.7,camera.position));
   life.tick(t);
   discoveries.tick(t,dt,camera.position);
+  return jaw;
  }
  if(preview)return {scene,creature,tick:animateReef};
 
@@ -80,7 +81,7 @@ export function createMarineWorld(T,camera,onReturn,{preview=false}={}){
  function setMap(open){map.hidden=!open;mapButton.setAttribute('aria-expanded',String(open));}
  function showCard(html){clearMovement();card.innerHTML='<button class="marine-close" aria-label="Close skills">×</button>'+html;card.hidden=false;card.querySelector('button').onclick=closeCard;}
  function toolList(list){return `<ul class="marine-tool-list">${list.map(tool=>`<li>${tool}</li>`).join('')}</ul>`;}
- function showSkill(i){if(selected>=0&&selected!==i)closeCard();selected=i;creature.activate(i,true);if(i===0){card.hidden=true;return;}const s=skills[i],hint=['Select a branch below the canopy.','The oyster releases three new shells with each opening.','All motion tools, collected at the anchor.','Each breath releases a new set of tools.'][i];showCard(`<small>${s.place}</small><h2>${s.name}</h2>${toolList(s.tools)}<p class="marine-gesture">${hint}</p>`);}
+ function showSkill(i){if(i===0)onReefCue?.('wake');if(i===1&&!creature.isUnlocked(1))onReefCue?.('oyster');if(selected>=0&&selected!==i)closeCard();selected=i;creature.activate(i,true);if(i===0){card.hidden=true;return;}const s=skills[i],hint=['Select a branch below the canopy.','The oyster releases three new shells with each opening.','All motion tools, collected at the anchor.','Each breath releases a new set of tools.'][i];showCard(`<small>${s.place}</small><h2>${s.name}</h2>${toolList(s.tools)}<p class="marine-gesture">${hint}</p>`);}
  function inspectRelic(i,n,tool){if(i===0){selected=0;if(tool){creature.selectBranch(n);showCard(`<small>${branchSkills[n].title}</small><h2>${tool}</h2>${toolList(branchSkills[n].tools)}`);}else revealBranch(n);return;}selected=i;const name=i===2?['Three.js (WebGL)','GSAP','Framer Motion'][n]:skills[i].tools[n];showCard(`<small>${skills[i].name}</small><h2>${name}</h2><button data-skill-group>View all ${skills[i].name} tools</button>`);card.querySelector('[data-skill-group]').onclick=()=>showSkill(i);}
  function revealBranch(n){const b=branchSkills[n];creature.selectBranch(n);showCard(`<small>THE LIVING TREE / BRANCH ${n+1}</small><h2>${b.title}</h2>${toolList(b.tools)}`);}
  function encounter(i){
@@ -96,6 +97,34 @@ export function createMarineWorld(T,camera,onReturn,{preview=false}={}){
 
  }
  function anchor(i){const p=creature.landmarks[i].position.clone();p.y+=[4.1,1,.35,.1][i];return p;}
+ const cueNames=['tree','oyster','jellyfish','shark'],cueRange=[14.5,10.2,11,11.5],inCueRange=cueRange.map(()=>false);
+ const soundPoint=V();
+ let jawOpen=false;
+ function updateReefCues(jaw){
+  for(let i=0;i<cueNames.length;i++){
+   const target=creature.landmarks[i].position;
+   soundPoint.set(target.x,target.y+[4.1,1,.35,.1][i],target.z);
+   const distance=soundPoint.distanceTo(pos);
+   if(i===0){
+    onReefCue?.('tree',1-T.MathUtils.smoothstep(distance,8,18));
+    continue;
+   }
+   if(i===3){
+    if(jaw<.10)jawOpen=false;
+    else if(jaw>.24&&!jawOpen){
+     jawOpen=true;
+     if(distance<cueRange[i]+2){soundPoint.project(camera);onReefCue?.('shark',soundPoint.x);}
+    }
+    continue;
+   }
+   if(distance>cueRange[i]+3)inCueRange[i]=false;
+   else if(distance<cueRange[i]&&!inCueRange[i]){
+    inCueRange[i]=true;
+    soundPoint.project(camera);
+    onReefCue?.(cueNames[i],soundPoint.x);
+   }
+  }
+ }
  function approach(i){if(!active)return;setMap(false);intro.hidden=true;interacted=true;closeCard();clearMovement();if(near===i||anchor(i).distanceTo(pos)<9){encounter(i);return;}const target=anchor(i),end=target.clone().add(V(i===0?1.3:i===1?-1.3:i===3?3.5:0,i===3?3.1:.35, i===0?13.6:i===2?8.4:i===3?-8.2:7.4));const middle=pos.clone().lerp(end,.5);middle.y=Math.max(middle.y,2.1)+1.6;
  const curve=new T.CatmullRomCurve3([pos.clone(),middle,end]);glide?.kill();if(reduced){pos.copy(end);const d=target.clone().sub(pos);look.set(Math.atan2(d.y,Math.hypot(d.x,d.z)),Math.atan2(-d.x,-d.z),0);near=i;glide=null;return;}const state={p:0};glide=gsap.to(state,{p:1,duration:Math.min(2.1,.8+pos.distanceTo(end)*.034),ease:'power2.inOut',onUpdate(){curve.getPoint(state.p,pos);const d=target.clone().sub(pos);const yaw=Math.atan2(-d.x,-d.z);look.y+=Math.atan2(Math.sin(yaw-look.y),Math.cos(yaw-look.y))*.2;look.x+= (Math.atan2(d.y,Math.hypot(d.x,d.z))-look.x)*.2;},onComplete(){near=i;glide=null;}});}
  function plot(x,z){return [(x+31)/62*100,(z+44)/67*100];}
@@ -150,14 +179,15 @@ export function createMarineWorld(T,camera,onReturn,{preview=false}={}){
  hud.querySelectorAll('[data-zoom]').forEach(b=>b.onclick=()=>zoom(b.dataset.zoom==='in'?-8:8));
  addEventListener('wheel',e=>{if(!active||e.target.closest?.('.marine-card,.marine-map'))return;e.preventDefault();if(e.ctrlKey||e.metaKey){zoom(e.deltaY*.065);return;}interrupt();const factor=e.deltaMode===1?16:e.deltaMode===2?innerHeight:1;wheelCurrent.add(V(e.deltaX*factor*.029,0,-e.deltaY*factor*.029).applyEuler(look)).clampLength(0,16);},{passive:false});
  const direction=V(),screen=V(),ray=new T.Raycaster(),hit=new T.Vector3();
- return {scene,enter(preserve=false){active=true;targetFov=66;hud.hidden=false;document.body.classList.add('in-marine');if(preserve){pos.copy(camera.position);look.setFromQuaternion(camera.quaternion,'YXZ');look.z=0;}else{pos.set(0,2.8,8);look.set(0,0,0);}near=-1;interacted=false;intro.hidden=false;setMap(false);closeCard();clearMovement();document.activeElement?.blur();},leave(){active=false;hud.hidden=true;document.body.classList.remove('in-marine');creature.cursor(null);interrupt();clearMovement();closeCard();setMap(false);},tick(dt,t){
- animateReef(dt,t);
+ return {scene,enter(preserve=false){active=true;jawOpen=false;inCueRange.fill(false);targetFov=66;hud.hidden=false;document.body.classList.add('in-marine');if(preserve){pos.copy(camera.position);look.setFromQuaternion(camera.quaternion,'YXZ');look.z=0;}else{pos.set(0,2.8,8);look.set(0,0,0);}near=-1;interacted=false;intro.hidden=false;setMap(false);closeCard();clearMovement();document.activeElement?.blur();},leave(){active=false;hud.hidden=true;document.body.classList.remove('in-marine');creature.cursor(null);interrupt();clearMovement();closeCard();setMap(false);},tick(dt,t){
+ const jaw=animateReef(dt,t);
  direction.set(Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft')),Number(keys.has('Space'))-Number(keys.has('KeyC')),Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp')));
  direction.x+=axisInput.x;direction.z+=axisInput.y;if(direction.length()>1)direction.normalize();direction.multiplyScalar(7).applyEuler(look);velocity.lerp(direction,1-Math.exp(-dt*6));if(!glide)pos.addScaledVector(velocity,dt).addScaledVector(wheelCurrent,dt);wheelCurrent.multiplyScalar(Math.exp(-dt*5.5));pos.clamp(V(-31,-2.6,-44),V(31,12,23));
  camera.position.copy(pos);camera.rotation.copy(look);if(active&&Math.abs(camera.fov-targetFov)>.03){camera.fov=T.MathUtils.damp(camera.fov,targetFov,10,dt);camera.updateProjectionMatrix();}camera.updateMatrixWorld(true);
 
  screen.copy(anchorGroup.position).project(camera);anchorControl.hidden=!active||!map.hidden||!card.hidden||anchorGroup.position.distanceTo(pos)>14||screen.z<-1||screen.z>1||Math.abs(screen.x)>.85||Math.abs(screen.y)>.8;anchorControl.style.left=(screen.x*.5+.5)*100+'%';anchorControl.style.top=(-screen.y*.5+.5)*100+4+'%';
  if(!map.hidden){const [left,top]=plot(pos.x,pos.z);mapPosition.style.left=left+'%';mapPosition.style.top=top+'%';mapPosition.style.transform=`translate(-50%,-50%) rotate(${-look.y}rad)`;}
+ updateReefCues(jaw);
  markers.forEach((b,i)=>{const p=anchor(i);screen.copy(p).project(camera);const distance=p.distanceTo(pos);b.hidden=!card.hidden||!map.hidden||screen.z>1||screen.z<-1||Math.abs(screen.x)>.83||Math.abs(screen.y)>.69;if(b.hidden)return;b.style.left=(screen.x*.5+.5)*100+'%';b.style.top=(-screen.y*.5+.5)*100-8+'%';const reached=near===i||distance<9;if(b.dataset.reached!==String(reached)){b.dataset.reached=String(reached);b.innerHTML=`<small>${skills[i].place}</small>${reached?skills[i].action:skills[i].name}`;}b.onclick=()=>reached?encounter(i):approach(i);});
  }};
 }

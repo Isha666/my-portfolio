@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cinematic Garden · Isha Venkataraman</title>
+<link rel="stylesheet" href="cinematic-garden.css">
+<link rel="preload" as="image" href="assets/cinematic-garden/arches.jpg">
+<script type="module" src="cinematic-garden.js"></script>
+</head>
+<body>
+<header><a href="./">← Portfolio</a><a href="#treasure">Find the chest</a></header>
+<main>
+ <section class="shot" id="arches">
+  <div class="frame">
+   <img src="assets/cinematic-garden/arches.jpg" width="965" height="541" alt="">
+   <div class="caption"><h1>Cinematic Garden</h1><a href="#bridge">Follow the path ↓</a></div>
+  </div>
+ </section>
+ <section class="shot" id="bridge">
+  <div class="frame">
+   <img src="assets/cinematic-garden/bridge.jpg" width="965" height="541" loading="lazy" alt="">
+   <div class="caption"><h2>Across the bridge</h2><a href="#treasure">Continue ↓</a></div>
+  </div>
+ </section>
+ <section class="shot" id="treasure">
+  <div class="frame">
+   <img src="assets/cinematic-garden/grove.jpg" width="965" height="541" loading="lazy" alt="">
+   <button class="treasure" type="button" aria-haspopup="dialog">
+    <span class="chest" aria-hidden="true"><i class="lid"></i><i class="box"></i><i class="latch"></i></span>
+    <span>Open treasure chest</span>
+   </button>
+  </div>
+ </section>
+</main>
+<dialog aria-labelledby="project-title">
+ <article>
+  <form method="dialog"><button aria-label="Close project">×</button></form>
+  <small>COMPUTER VISION / ACCESSIBILITY</small>
+  <h2 id="project-title">Perceptiv</h2>
+  <p><strong>Smart Glasses for Visual Impairment</strong></p>
+  <p>An edge-based vision system that detects objects, traffic signs, and road hazards in real time, designed for people with visual impairments.</p>
+ </article>
+</dialog>
+</body>
+</html>

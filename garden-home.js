@@ -1,3 +1,4 @@
+import {disposeScene} from './scene-resources.js';
 import {createGardenButterflies} from './garden-butterflies.js';
 import {organicGeometry} from './garden-plant-geometry.js';
 import * as T from './vendor/three.module.js';
@@ -229,7 +230,7 @@ export function createGardenHome(){
  const butterflies=createGardenButterflies(T,scene,8,()=>[0,.7+random()*2.7,-4+random()*6]);
  const opening=(time,phase)=>T.MathUtils.smoothstep(.5+.5*Math.sin(time*.85+phase),.12,.86);
  let gazeX=0,gazeY=0;
- return {render(renderer,dt,time,x,y,portal,reduced,intro,idle){
+ return {dispose(){disposeScene(scene);},render(renderer,dt,time,x,y,portal,reduced,intro,idle){
   const aspect=innerWidth/innerHeight;
   camera.aspect=aspect;
   camera.position.set(0,3.05,aspect<1?11.5:9.2);

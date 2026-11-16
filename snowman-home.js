@@ -1,9 +1,13 @@
+import {disposeScene} from './scene-resources.js';
+import {createHomeAudio} from './home-audio.js?v=reef-detail-1';
 import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
 import {createPineGeometry,addSnowyBoughs} from './winter-pines.js';
-import {createGardenHome} from './garden-home.js?v=miniature-6';
+import {createGardenHome} from './garden-home.js?v=miniature-7';
 import * as THREE from './vendor/three.module.js';
 
-export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkills,initialWorld=0,trailMountains,winterScene,onFrame,onVisibility}){
+export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkills,initialWorld=0,initialActive=true,trailMountains,onVisibility}){
+ let winter;
+ function buildWinter(){
  const scene=new THREE.Scene();scene.background=new THREE.Color('#102238');scene.fog=new THREE.FogExp2('#183049',.024);
  const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.1,175);camera.position.set(0,2.9,11);camera.lookAt(0,2.55,0);
  const homeLights=new THREE.Group();scene.add(homeLights);homeLights.add(new THREE.HemisphereLight('#dceaff','#47546a',1.2));const light=new THREE.DirectionalLight('#ffe6cb',3);light.position.set(-4,7,6);homeLights.add(light);const rim=new THREE.DirectionalLight('#91c9ff',2);rim.position.set(4,5,-3);homeLights.add(rim);
@@ -116,11 +120,12 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   [3,-64,-105,.16],[0,-39,-88,.17],[2,-20,-84,.15],
   [1,3,-96,.16],[0,26,-83,.16],[2,49,-97,.18],[3,71,-112,.17]
  ];
+ const sharedPeaks=[];
  for(const [index,x,z,scale] of skyline){
   const peak=trailMountains[index].clone();
   peak.position.set(x,-1.2,z);
   peak.scale.setScalar(scale);
-  scene.add(peak);
+  scene.add(peak);sharedPeaks.push(peak);
  }
  const igloo=new THREE.Group();igloo.position.set(-4.6,-.2,-16);igloo.rotation.y=.23;scene.add(igloo);const dome=new THREE.Mesh(new THREE.SphereGeometry(2.05,40,24,0,Math.PI*2,0,Math.PI/2),snow);igloo.add(dome);const seam=new THREE.MeshStandardMaterial({color:'#8da5b9',roughness:1});for(let row=1;row<6;row++){const angle=row*Math.PI/12,r=2.055*Math.sin(angle),y=2.055*Math.cos(angle);const ring=new THREE.Mesh(new THREE.TorusGeometry(r,.012,5,70),seam);ring.rotation.x=Math.PI/2;ring.position.y=y;igloo.add(ring);for(let j=0;j<row*5;j++){const az=j*Math.PI*2/(row*5)+(row%2)*.19;rod(igloo,[Math.cos(az)*r,y,Math.sin(az)*r],[Math.cos(az)*r*.9,y+.19,Math.sin(az)*r*.9],.01,seam);}}
  const arch=new THREE.Mesh(new THREE.TorusGeometry(.66,.24,12,32,Math.PI),snow);arch.position.set(0,.05,1.9);igloo.add(arch);const doorway=new THREE.Mesh(new THREE.CircleGeometry(.64,32,0,Math.PI),new THREE.MeshBasicMaterial({color:'#192c40',side:THREE.DoubleSide}));doorway.position.set(0,.05,2.04);igloo.add(doorway);const warm=new THREE.PointLight('#ffd39b',4,6);warm.position.set(0,.4,2.5);igloo.add(warm);
@@ -168,8 +173,13 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   scene.add(points);
   crystalFields.push({positions,geometry});
  }
+ return {scene,camera,model,eyeWhites,pupils,smile,head,arm,particles,geo,crystalFields,auroraTime,bunny,bunnyBody,bunnyEars,hindPaws,forePaws,bunnyShadow,dispose(){
+  for(const peak of sharedPeaks)peak.removeFromParent();
+  disposeScene(scene);
+ }};
+ }
  const ui=document.createElement('section');ui.id='snowmanHome';ui.setAttribute('aria-label','Welcome to Isha’s portfolio');ui.innerHTML='<div class="welcome-copy"><span>A LITTLE WONDER, BEFORE WE BEGIN</span><h1 aria-label="Hello, welcome to my portfolio!"><span class="snow-typed" aria-hidden="true"></span><i class="typing-cursor" aria-hidden="true">|</i></h1></div><div class="welcome-bottom"><p>A world is waiting.</p><button id="beginJourney" aria-label="Explore Portfolio"><span class="portal-window"><svg viewBox="0 0 180 180" aria-hidden="true"><path fill="#728da7" d="M0 125 48 44 83 94 121 33 180 128V180H0Z"/><path fill="#e3edf4" d="m48 44-21 36 22-9 14 7zm73-11-25 48 22-16 19 14z"/><path fill="#193d48" d="m15 143 17-54 18 54H39l16 29H9l15-29zm103 5 15-49 18 49h-9l14 32h-43l14-32z"/><path fill="#c0dce2" d="M71 180q-13-20 19-40t4-30q38 16 12 33t12 37"/></svg></span><span class="portal-button-label">Explore Portfolio ↗</span></button><small>MOVE YOUR POINTER · SAY HELLO</small></div><div class="snowman-name"><small>HELLO, MY NAME IS</small><strong>Isha<br>Venkataraman</strong></div>';document.body.append(ui);
- let eyeScreenX=innerWidth*.5,eyeScreenY=innerHeight*.42;let active=true,tx=0,ty=0,lx=0,ly=0,lastMove=performance.now(),enteredAt=performance.now();const typed=ui.querySelector('.snow-typed'),nameplate=ui.querySelector('.snowman-name'),greeting='Hello, welcome to my portfolio!';
+ let eyeScreenX=innerWidth*.5,eyeScreenY=innerHeight*.42;let active=initialActive,tx=0,ty=0,lx=0,ly=0,lastMove=performance.now(),enteredAt=performance.now();const typed=ui.querySelector('.snow-typed'),nameplate=ui.querySelector('.snowman-name'),greeting='Hello, welcome to my portfolio!';
  let garden=null, marine=null, marineLoad=null, selectedWorld=-1, portalHovered=false;
  const worlds=[
   {name:'Winter',label:'Explore Portfolio',open:onExplore},
@@ -184,6 +194,19 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  selector.setAttribute('aria-label','Home environments');
  selector.innerHTML='<button type="button" aria-label="Previous environment">←</button><span aria-live="polite"></span><button type="button" aria-label="Next environment">→</button>';
  ui.append(selector);
+ const cinemaPortal=document.createElement('a');
+ cinemaPortal.className='cinematic-portal-link';
+ cinemaPortal.href='cinematic-garden.html';
+ cinemaPortal.textContent='Cinematic Garden ↗';
+ cinemaPortal.hidden=true;
+ ui.append(cinemaPortal);
+ const soundButton=document.createElement('button');
+ soundButton.type='button';
+ soundButton.className='home-sound';
+ soundButton.textContent='Sound off';
+ soundButton.setAttribute('aria-pressed','false');
+ const homeAudio=createHomeAudio(soundButton);
+ document.body.append(soundButton);
  const worldName=selector.querySelector('span');
  let progress=0,target=0;
  let blendTarget=null;
@@ -209,26 +232,35 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  blendQuad.frustumCulled=false;
  blendScene.add(blendQuad);
  const worldIndex=value=>THREE.MathUtils.euclideanModulo(value,worlds.length);
+ function releasePreviews(keep){
+  if(keep!==1){garden?.dispose();garden=null;}
+  if(keep!==2){marine?.dispose();marine=null;}
+  if(keep!==0){
+   blendTarget?.dispose();
+   blendTarget=null;
+   blendMaterial.uniforms.nextImage.value=null;
+  }
+ }
  function setProgress(value){
   target=value;
   if(target===progress)return;
-  garden??=createGardenHome();
   const first=Math.floor(Math.min(progress,target)),last=Math.ceil(Math.max(progress,target));
+  if(first+worldIndex(1-first)<=last)garden??=createGardenHome();
   const reefOnRoute=first+worldIndex(2-first)<=last;
-  if(reefOnRoute&&!marineLoad){
-   marineLoad=import('./marine-home.js?v=reef-7').then(({createMarineHome})=>{
-    marine=createMarineHome();
+  if(reefOnRoute&&!marine&&!marineLoad){
+   marineLoad=import('./marine-home.js?v=render-budget-1').then(({createMarineHome})=>{
+    if(active)marine=createMarineHome();
    }).catch(error=>{
-    marineLoad=null;
     target=Math.round(progress);
     console.error('Could not load underwater Home',error);
-   });
+   }).finally(()=>{marineLoad=null;});
   }
  }
  function updateSelectedWorld(){
   const selected=worldIndex(Math.round(progress));
   if(selected===selectedWorld)return;
   selectedWorld=selected;
+  cinemaPortal.hidden=selected!==1;
   lastMove=enteredAt=performance.now();
   tx=ty=lx=ly=0;
   ui.classList.toggle('garden-home-selected',selected===1);
@@ -281,9 +313,9 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  function point(e){if(!active)return;tx=THREE.MathUtils.clamp((e.clientX-eyeScreenX)/Math.min(150,innerWidth*.21),-1,1);ty=THREE.MathUtils.clamp((eyeScreenY-e.clientY)/Math.min(145,innerHeight*.20),-1,1);lastMove=performance.now();}
  addEventListener('touchmove',e=>{if(!active||e.target.closest?.('header'))return;const touch=e.touches[0];if(touch){point(touch);if(e.cancelable)e.preventDefault();}},{passive:false});addEventListener('touchstart',e=>{if(active&&e.touches[0])point(e.touches[0]);},{passive:true});addEventListener('pointermove',point);addEventListener('pointerdown',point);addEventListener('keydown',e=>{if(!active)return;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){if(!e.repeat)stepWorld(e.key==='ArrowRight'?1:-1);e.preventDefault();return;}const directions={ArrowUp:[0,1],ArrowDown:[0,-1]};if(directions[e.key]){[tx,ty]=directions[e.key];lastMove=performance.now();e.preventDefault();}});
  portal.onclick=event=>worlds[selectedWorld].open(event.currentTarget);
- function setActive(value){active=value;ui.hidden=!value;renderer.domElement.setAttribute('aria-label',value?'A waving snowman with eyes that follow your pointer, in a snowy winter forest':'A first-person reindeer sleigh ride through a snow-covered forest with igloos and alpine mountains');document.body.classList.toggle('on-snowman-home',value);document.body.style.overflow=value?'hidden':'';model.visible=homeLights.visible=flakes.visible=value;onVisibility(value);if(value){selectedWorld=-1;updateSelectedWorld();tx=ty=0;lastMove=enteredAt=performance.now();ui.classList.remove('name-visible','explore-visible');}}
- setActive(true);
- if(initialWorld){
+ function setActive(value){active=value;if(!value){progress=target=worldIndex(Math.round(progress));releasePreviews(-1);winter?.dispose();winter=null;}ui.hidden=!value;renderer.domElement.setAttribute('aria-label',value?'A waving snowman with eyes that follow your pointer, in a snowy winter forest':'A first-person reindeer sleigh ride through a snow-covered forest with igloos and alpine mountains');document.body.classList.toggle('on-snowman-home',value);document.body.style.overflow=value?'hidden':'';onVisibility(value);if(value){const destination=target;progress=0;setProgress(destination);selectedWorld=-1;updateSelectedWorld();tx=ty=0;lastMove=enteredAt=performance.now();ui.classList.remove('name-visible','explore-visible');}}
+ setActive(initialActive);
+ if(initialWorld&&initialActive){
   const startingTarget=initialWorld===2?-1:initialWorld;
   setProgress(startingTarget);
   if(initialWorld===1)progress=target;
@@ -291,7 +323,8 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
    if(active&&marine&&target===startingTarget)progress=target;
   });
  }
- return {get active(){return active;},get world(){return marineLoad&&!marine&&initialWorld===2&&target===-1?2:selectedWorld;},setActive,tick(dt,t,frameDelta=dt){if(!active)return;
+ if(!initialActive)progress=target=initialWorld;
+ return {get active(){return active;},get world(){return marineLoad&&!marine&&initialWorld===2&&target===-1?2:selectedWorld;},setActive,updateAudio(section,crossing,reefReady){homeAudio.update(section,selectedWorld,crossing,reefReady);},playReefCue:homeAudio.playReefCue,updateGardenRide:homeAudio.updateGardenRide,playGardenChime:homeAudio.playGardenChime,playTransition:homeAudio.playTransition,stopTransition:homeAudio.stopTransition,tick(dt,t,frameDelta=dt){if(!active)return;
  const readyTarget=marine||!marineLoad?target:THREE.MathUtils.clamp(target,0,1);
  progress=reduced?readyTarget:THREE.MathUtils.damp(progress,readyTarget,7,Math.min(frameDelta,.16));
  if(Math.abs(progress-readyTarget)<.009)progress=readyTarget;
@@ -301,7 +334,11 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   target-=offset;
  }
  updateSelectedWorld();
- const now=performance.now(),intro=(now-enteredAt)/1000-.45,idle=(now-lastMove)/1000;typed.textContent=greeting.slice(0,reduced?greeting.length:Math.max(0,Math.floor(intro*26)));ui.classList.toggle('name-visible',reduced||intro>1.25);ui.classList.toggle('explore-visible',reduced||intro>1.85);ui.querySelector('button').disabled=!reduced&&intro<1.85;ui.classList.toggle('typing-complete',typed.textContent.length===greeting.length);const wink=!reduced&&intro>2.65&&idle>2.7?Math.pow(Math.max(0,Math.sin((idle-2.7)*Math.PI/3*2)),22):0;eyeWhites[0].scale.y=1.13*(1-wink*.92);pupils[0].pupil.scale.y=1.08*(1-wink*.94);smile.scale.y=1+wink*.18;if(performance.now()-lastMove>1100)tx=ty=0;let gazeX=tx,gazeY=ty;if(!reduced&&intro<0){gazeX=gazeY=0;}else if(!reduced&&intro<2.65){gazeX=intro<1.25?-.4+Math.min(1,intro/1.25)*.8:intro<1.85?0:1;gazeY=intro<1.25?1:intro<1.85?-1:0;}lx=THREE.MathUtils.damp(lx,gazeX,10,dt);ly=THREE.MathUtils.damp(ly,gazeY,10,dt);pupils.forEach(({pupil,x})=>{const radius=Math.max(1,Math.hypot(lx,ly));
+ const now=performance.now(),intro=(now-enteredAt)/1000-.45,idle=(now-lastMove)/1000;typed.textContent=greeting.slice(0,reduced?greeting.length:Math.max(0,Math.floor(intro*26)));ui.classList.toggle('name-visible',reduced||intro>1.25);ui.classList.toggle('explore-visible',reduced||intro>1.85);ui.querySelector('button').disabled=!reduced&&intro<1.85;ui.classList.toggle('typing-complete',typed.textContent.length===greeting.length);const uiRect=ui.getBoundingClientRect();
+ if(performance.now()-lastMove>1100)tx=ty=0;let gazeX=tx,gazeY=ty;if(!reduced&&intro<0){gazeX=gazeY=0;}else if(!reduced&&intro<2.65){gazeX=intro<1.25?-.4+Math.min(1,intro/1.25)*.8:intro<1.85?0:1;gazeY=intro<1.25?1:intro<1.85?-1:0;}lx=THREE.MathUtils.damp(lx,gazeX,10,dt);ly=THREE.MathUtils.damp(ly,gazeY,10,dt);
+ function renderWinter(){
+ const {scene,camera,model,eyeWhites,pupils,smile,head,arm,particles,geo,crystalFields,auroraTime,bunny,bunnyBody,bunnyEars,hindPaws,forePaws,bunnyShadow}=winter??=buildWinter();
+ const wink=!reduced&&intro>2.65&&idle>2.7?Math.pow(Math.max(0,Math.sin((idle-2.7)*Math.PI/3*2)),22):0;eyeWhites[0].scale.y=1.13*(1-wink*.92);pupils[0].pupil.scale.y=1.08*(1-wink*.94);smile.scale.y=1+wink*.18;pupils.forEach(({pupil,x})=>{const radius=Math.max(1,Math.hypot(lx,ly));
  pupil.position.x=x+lx/radius*.115;
  pupil.position.y=.14+ly/radius*.128;
  pupil.position.z=.733-.021*Math.min(1,Math.hypot(lx,ly));});head.rotation.y=lx*.11;head.rotation.x=-ly*.065;arm.rotation.z=reduced?0:Math.sin(t*2.5)*.22;model.rotation.y=-.055;for(let i=0;i<particles.length;i+=3){particles[i+1]-=dt*(.35+(i%7)*.08);if(particles[i+1]<0)particles[i+1]=17;}geo.attributes.position.needsUpdate=true;
@@ -314,7 +351,7 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   }
   geometry.attributes.position.needsUpdate=true;
  }
- const wide=innerWidth/innerHeight>1.1;camera.aspect=innerWidth/innerHeight;camera.position.set(0,2.9,wide?7.4:11);camera.lookAt(0,2.75,-8);camera.updateProjectionMatrix();model.position.x=0;model.updateMatrixWorld(true);camera.updateMatrixWorld(true);const uiRect=ui.getBoundingClientRect();const labelPosition=model.localToWorld(new THREE.Vector3(.12,2.46,.96)).project(camera);nameplate.style.left=((labelPosition.x+1)*innerWidth/2-uiRect.left)+'px';nameplate.style.top=((1-labelPosition.y)*innerHeight/2-uiRect.top)+'px';const left=model.localToWorld(new THREE.Vector3(-.63,2.46,.96)).project(camera),right=model.localToWorld(new THREE.Vector3(.87,2.46,.96)).project(camera);const badgeScale=THREE.MathUtils.clamp((right.x-left.x)*innerWidth/2/155,.5,1.15);nameplate.style.transform='translate(-50%,-50%) rotate(-4deg) scale('+badgeScale+')';const eyePosition=model.localToWorld(new THREE.Vector3(0,3.77,.72)).project(camera);eyeScreenX=(eyePosition.x+1)*innerWidth/2;eyeScreenY=(1-eyePosition.y)*innerHeight/2;
+ const wide=innerWidth/innerHeight>1.1;camera.aspect=innerWidth/innerHeight;camera.position.set(0,2.9,wide?7.4:11);camera.lookAt(0,2.75,-8);camera.updateProjectionMatrix();model.position.x=0;model.updateMatrixWorld(true);camera.updateMatrixWorld(true);const labelPosition=model.localToWorld(new THREE.Vector3(.12,2.46,.96)).project(camera);nameplate.style.left=((labelPosition.x+1)*innerWidth/2-uiRect.left)+'px';nameplate.style.top=((1-labelPosition.y)*innerHeight/2-uiRect.top)+'px';const left=model.localToWorld(new THREE.Vector3(-.63,2.46,.96)).project(camera),right=model.localToWorld(new THREE.Vector3(.87,2.46,.96)).project(camera);const badgeScale=THREE.MathUtils.clamp((right.x-left.x)*innerWidth/2/155,.5,1.15);nameplate.style.transform='translate(-50%,-50%) rotate(-4deg) scale('+badgeScale+')';const eyePosition=model.localToWorld(new THREE.Vector3(0,3.77,.72)).project(camera);eyeScreenX=(eyePosition.x+1)*innerWidth/2;eyeScreenY=(1-eyePosition.y)*innerHeight/2;
  auroraTime.value=reduced?0:t;
  const hopTime=reduced?0:t;
  const cycle=hopTime/.94;
@@ -336,9 +373,11 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   paw.rotation.x=lift*.62;
  });
  bunnyShadow.position.set(bunny.position.x,-.191,bunny.position.z);
+ renderer.render(scene,camera);
+ }
  function renderWorld(index){
   if(index===0){
-   renderer.render(scene,camera);
+   renderWinter();
    return;
   }
   const lookingAtPortal=(portalHovered||document.activeElement===portal)&&intro>=2.65;
@@ -360,6 +399,10 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  }
  function compositeWorld(index,reveal){
   const size=renderer.getDrawingBufferSize(blendSize);
+  if(progress%1!==0){
+   const scale=Math.min(1,Math.sqrt(900000/(size.x*size.y)));
+   size.multiplyScalar(scale).floor();
+  }
   if(!blendTarget)blendTarget=new THREE.WebGLRenderTarget(size.x,size.y);
   else if(blendTarget.width!==size.x||blendTarget.height!==size.y)blendTarget.setSize(size.x,size.y);
   const previousTarget=renderer.getRenderTarget(),autoClear=renderer.autoClear;
@@ -383,5 +426,6 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  if(baseWorld===0)compositeWorld(baseWorld,1);
  else renderWorld(baseWorld);
  if(mix!==0)compositeWorld(worldIndex(lower+1),mix);
+ else if(progress===target&&!swipe)releasePreviews(baseWorld);
  }};
 }

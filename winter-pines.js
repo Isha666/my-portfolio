@@ -4,7 +4,7 @@ const boughGeo=new THREE.SphereGeometry(1,8,4);
  return {foliageCone,boughGeo};
 }
 
-export function addSnowyBoughs({x,y,z,h,geometry,needles,snow,instance,rand}){
+export function addSnowyBoughs({x,y,z,h,geometry,needles,snow,instance,rand,detail=true}){
  const {foliageCone,boughGeo}=geometry;
  for(let row=0;row<11;row++){
   const t=row/10,yy=y+h*(.12+t*.79),radius=h*(.24*(1-t)+.018),depth=h*(.17-t*.055);
@@ -12,8 +12,10 @@ export function addSnowyBoughs({x,y,z,h,geometry,needles,snow,instance,rand}){
   instance(foliageCone,snow,x,yy+depth*.16,z,radius*.94,depth*.91,radius*.94,0,row*.67);
   for(let j=0;j<7;j++){
    const angle=j*Math.PI*2/7+row*.61,length=radius*rand(.82,1.13);
+   const tilt=rand(-.1,.1);
+   if(!detail&&j%2===1)continue;
    instance(boughGeo,snow,x+Math.cos(angle)*length*.69,yy-depth*.16,z+Math.sin(angle)*length*.69,
-    length*.19,depth*.16,length*.39,.08,-angle+Math.PI/2,rand(-.1,.1));
+    length*.19,depth*.16,length*.39,.08,-angle+Math.PI/2,tilt);
   }
  }
 }

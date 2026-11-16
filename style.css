@@ -194,3 +194,42 @@ header nav button{border-bottom:1px solid transparent}header nav button[aria-cur
  top:50%;transform:translate(-50%,-50%);opacity:var(--reef-reveal,0);
  font-size:clamp(9px,1vw,12px);text-shadow:0 1px 4px #051028,0 0 6px #051028;
 }
+
+.home-sound {
+ position:fixed;
+ top:82px;
+ right:clamp(10px,3vw,40px);
+ z-index:41;
+ min-height:38px;
+ padding:5px 12px;
+ border:1px solid #ffffff75;
+ border-radius:24px;
+ background:#112638e8;
+ color:#fff;
+ font:600 12px system-ui;
+ pointer-events:auto;
+ cursor:pointer;
+}
+.home-sound[aria-pressed="true"]{border-color:#a6eed9;color:#a6eed9}
+@media(max-width:600px){
+ .home-sound{top:auto;bottom:68px;min-height:44px}
+}
+
+.cinematic-portal-link{
+ position:absolute;bottom:72px;left:50%;transform:translateX(-50%);
+ padding:9px 15px;border:1px solid #f5e8c788;border-radius:24px;
+ background:#182d25ed;color:#fff4db;white-space:nowrap;font:600 12px system-ui;
+ pointer-events:auto;text-decoration:none;z-index:5;
+}
+.cinematic-portal-link:hover,.cinematic-portal-link:focus-visible{background:#315840}
+
+/* Let the Projects scene show through below the navigation. */
+.in-autumn:not(.in-marine):not(.marine-diving) header {
+ color:#fff8e9;
+ background:linear-gradient(180deg,#172d25dc 0%,#20392db8 52%,#20392d00 100%);
+ border-bottom-color:transparent;
+ text-shadow:0 1px 5px #13271f;
+}
+.in-autumn:not(.in-marine):not(.marine-diving) header nav button[aria-current="page"] {
+ color:#ffe1ad;
+}

@@ -1,9 +1,14 @@
+import {growGardenTree} from './garden-tree-form.js';
+import {addGardenBreeze} from './garden-breeze.js';
 import {createGardenRower} from './garden-rower.js';
 // Mesh-only lakeside planting, boats and conservatory pavilions.
-export function createGardenLakeside(THREE,scene,routeX,routeY,terrain=()=>0){
+export function createGardenLakeside(THREE,scene,routeX,routeY,terrain,breeze){
  let seed=9021;const rand=()=>((seed=seed*16807%2147483647)-1)/2147483646;
  const mat=(color,extra={})=>new THREE.MeshStandardMaterial({color,roughness:.84,...extra});
  const bark=mat('#71533f'),leaves=[mat('#477744'),mat('#65904e'),mat('#335f42')],pinks=[mat('#f6b7cf',{side:THREE.DoubleSide,emissive:'#b4587e',emissiveIntensity:.12}),mat('#ee89b4',{side:THREE.DoubleSide,emissive:'#b4587e',emissiveIntensity:.12}),mat('#ffdeeb',{side:THREE.DoubleSide,emissive:'#d5a9bd',emissiveIntensity:.10})],gold=mat('#b8a06a',{metalness:.55}),wood=mat('#9b693f'),trim=mat('#d2aa70'),stone=mat('#c2bea0');
+ for(const material of leaves)addGardenBreeze(material,breeze,.022,.025);
+ for(const material of pinks)addGardenBreeze(material,breeze,.04,.018);
+ const twigWood=bark.clone();addGardenBreeze(twigWood,breeze,.027);
  const grove=new THREE.Group();scene.add(grove);let plantingGrove=false;const dummy=new THREE.Object3D(),batches=new Map(),ball=new THREE.SphereGeometry(1,8,6);
  const petal=new THREE.BufferGeometry(),pv=[0,.025,0],pi=[];for(let i=0;i<8;i++){const a=i*Math.PI/4;pv.push(Math.cos(a)*.075,0,Math.sin(a)*.115);pi.push(0,(i+1)%8+1,i+1);}petal.setAttribute('position',new THREE.Float32BufferAttribute(pv,3));petal.setIndex(pi);petal.computeVertexNormals();
  const hedgeGeo=new THREE.BoxGeometry(1,1,1);
@@ -12,13 +17,24 @@ export function createGardenLakeside(THREE,scene,routeX,routeY,terrain=()=>0){
  function mesh(g,m,parent=scene){const o=new THREE.Mesh(g,m);o.castShadow=o.receiveShadow=true;parent.add(o);return o;}
  function branch(a,b,r,m=bark,parent=plantingGrove?grove:scene){const p=new THREE.Vector3(...a),q=new THREE.Vector3(...b),d=q.clone().sub(p),o=mesh(new THREE.CylinderGeometry(r*.65,r,d.length(),7),m,parent);o.position.copy(p.add(q).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return o;}
  function blossom(x,y,z,size=1,color=0){for(let j=0;j<5;j++){const a=j*Math.PI*.4;instance(petal,pinks[color%3],x+Math.cos(a)*.068*size,y,z+Math.sin(a)*.068*size,size,size,size,.35+Math.sin(x*3+z)*.9,a,Math.cos(z*2+y)*.8);}}
+ const limbGeo=new THREE.CylinderGeometry(.63,1,1,7),limbAxis=new THREE.Vector3(0,1,0);
+ const limbRotation=new THREE.Quaternion(),limbEuler=new THREE.Euler();
+ function treeLimb(a,b,r){
+  const axis=b.clone().sub(a),length=axis.length(),center=a.clone().lerp(b,.5);
+  limbEuler.setFromQuaternion(limbRotation.setFromUnitVectors(limbAxis,axis.normalize()));
+  instance(limbGeo,r<.065?twigWood:bark,center.x,center.y,center.z,r,length,r,limbEuler.x,limbEuler.y,limbEuler.z);
+ }
  function tree(x,z,h,cherry=true,base=0){
-  if(plantingGrove)base=terrain(x,z);const lean=(rand()-.5)*h*.10;branch([x,base,z],[x+lean,base+h*.53,z],h*.033);
-  for(let b=0;b<8;b++){const angle=b*2.4+rand()*.3,reach=h*(.20+rand()*.14),bx=x+Math.cos(angle)*reach,bz=z+Math.sin(angle)*reach,by=base+h*(.48+rand()*.29),joint=[x+lean,base+h*.35,z],fork=[x+Math.cos(angle)*reach*.58,by-.45,bz];branch(joint,fork,h*.014);branch(fork,[bx,by,bz],h*.008);
-   for(let twig=0;twig<3;twig++){const a=angle+(twig-1)*.8,cx=bx+Math.cos(a)*h*.10,cz=bz+Math.sin(a)*h*.10,cy=by+(rand()-.5)*h*.12;branch([bx,by,bz],[cx,cy,cz],h*.0035);
-    for(let k=0;k<(cherry?145:35);k++){const az=rand()*6.28,v=rand()*2-1,r=Math.cbrt(rand()),width=h*.145,xx=cx+Math.cos(az)*Math.sqrt(1-v*v)*r*width,zz=cz+Math.sin(az)*Math.sqrt(1-v*v)*r*width,yy=cy+v*r*width*.75;if(cherry)blossom(xx,yy,zz,1.15+rand()*.55,(b+twig)%3);else instance(leaf,leaves[b%3],xx,yy,zz,1.3,1.3,1.3,rand()*3,rand()*6,rand()*3);}
+  if(plantingGrove)base=terrain(x,z);
+  const tint=Math.floor(rand()*3),density=z<-132?52:78;
+  growGardenTree(THREE,x,base,z,h,rand,treeLimb,(center,width,angle,limb)=>{
+   for(let k=0;k<(cherry?density:45);k++){
+    const az=rand()*6.28,r=Math.sqrt(rand())*width;
+    const xx=center.x+Math.cos(az)*r,zz=center.z+Math.sin(az)*r,yy=center.y+(rand()-.5)*width*.92;
+    if(cherry)blossom(xx,yy,zz,.88+rand()*.82,(tint+(limb%4===0?1:0))%3);
+    if(!cherry||k%14===0)instance(leaf,leaves[limb%3],xx,yy,zz,1+rand(),1,1+rand(),rand()-.5,angle+rand()*2,rand()-.5);
    }
-  }
+  });
  }
 
  // Small distant islands leave a broad, open channel beside the bridge.
@@ -30,9 +46,9 @@ export function createGardenLakeside(THREE,scene,routeX,routeY,terrain=()=>0){
  // Beds follow the actual bank elevation so flowers remain above the sloping ground.
  for(let i=0;i<14500;i++){const z=i<9000?-96-rand()*26:-122-rand()*35,x=routeX(z)+(i%2?1:-1)*(3.5+rand()*86),base=terrain(x,z)+.03,h=.35+rand()*.55;if(base<-.55)continue;instance(stemGeo,leaves[0],x,base+h/2,z,1,h,1);const pm=[yellowPetal,creamPetal,violetPetal,coralPetal,pinks[0]][Math.floor((x+100)/5+(-z)/7)%5];for(let j=0;j<7;j++){const a=j/7*6.28;instance(petal,pm,x+Math.cos(a)*.16,base+h,z+Math.sin(a)*.16,1.9,1.9,1.9,.15,a,0);}instance(ball,centre,x,base+h+.02,z,.05,.025,.05);instance(leaf,leaves[i%3],x,base+h*.45,z,1,1,1,.4,i,0);}
  // Layered rear and side groves replace the empty grass horizon.
- for(let row=0;row<2;row++)for(let i=0;i<22;i++)tree(-71+i*6.8,-134-row*15-rand()*7,9+rand()*5,(i+row)%4!==0);
+ for(let row=0;row<2;row++)for(let i=0;i<22;i++)tree(-71+i*6.8+(rand()-.5)*4,-134-row*15-rand()*10,6.8+rand()*6.6,(i+row)%4!==0);
  for(const side of [-1,1]){
-  for(let i=0;i<6;i++)tree(routeX(-106-i*6)+side*5.6,-106-i*6,10.7+rand()*1.8,true);
+  for(let i=0;i<6;i++)tree(routeX(-106-i*6)+side*(6.6+rand()*2),-106-i*6-rand()*3,7.4+rand()*4.8,true);
   for(let i=0;i<6;i++)tree(side*(19+i*8),-111-rand()*10,8.5+rand()*4,i%3!==0);
   // Clipped hedges border the blossom avenue, with flowering shrubs beyond them.
   for(let i=0;i<50;i++){const z=-106-i*.9,x=routeX(z)+side*3.6,y=terrain(x,z);instance(hedgeGeo,leaves[0],x,y+.40,z,.65,.8,.94);}
@@ -52,6 +68,7 @@ export function createGardenLakeside(THREE,scene,routeX,routeY,terrain=()=>0){
  // Floating petals stay on the water surface, with a slow ripple drift.
  const floating=[];for(let i=0;i<750;i++){const z=-21-rand()*78,x=(rand()>.5?1:-1)*(4+rand()*15);floating.push([x,z]);instance(petal,pinks[i%3],x,-.64,z,.7,.7,.7,0,rand()*6,0);}
  batches.forEach(({g,m,parent,items})=>{const inst=new THREE.InstancedMesh(g,m,items.length);items.forEach((v,i)=>{dummy.position.set(v[0],v[1],v[2]);dummy.scale.set(v[3],v[4],v[5]);dummy.rotation.set(v[6],v[7],v[8]);dummy.updateMatrix();inst.setMatrixAt(i,dummy.matrix);});inst.castShadow=false;inst.receiveShadow=true;inst.computeBoundingSphere();parent.add(inst);});
+ batches.clear();
  const drifting=new THREE.InstancedMesh(petal,pinks[1],96);scene.add(drifting);
  // The far landing is always present: perspective and the bridge crest reveal it naturally.
  return {tick(time,cameraZ=8){for(let i=0;i<96;i++){const t=(time*.045+i/96)%1,side=i%2?1:-1,z=-105-(i%9)*2.5;dummy.position.set(routeX(z)+side*(4.2-t*3.6)+Math.sin(time*.4+i)*.3,6.7-t*6.5,z+Math.sin(i*2)*2+t);dummy.rotation.set(time*.6+i,time*.35+i,i);dummy.scale.setScalar(.9);dummy.updateMatrix();drifting.setMatrixAt(i,dummy.matrix);}drifting.instanceMatrix.needsUpdate=true;boats.forEach(({g,x,z,angle,rower},i)=>{rower.tick(time);const crossing=i<3,phase=time*.075+i*2.1;g.position.set(crossing?Math.sin(phase)*30:x+Math.sin(phase)*.5,-.68+Math.sin(time*.8+i)*.035,z+Math.cos(time*.1+i)*.3);g.rotation.set(Math.sin(time*.6+i)*.018,crossing?(Math.cos(phase)>0?-Math.PI/2:Math.PI/2):angle+Math.sin(time*.13+i)*.025,Math.sin(time*.7+i)*.025);});}};

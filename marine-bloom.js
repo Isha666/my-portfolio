@@ -1,13 +1,13 @@
 // The Coding Club Join Us petal surface, sampled as indexed WebGL geometry.
-export function makeMarineBloom(T,parent,{scale=1,colors=['#acd9ff','#b8a6fa','#ffe3fa'],rows=24,cols=12}={}){
+export function makeMarineBloom(T,parent,{scale=1,colors=['#acd9ff','#b8a6fa','#ffe3fa'],highlight=null,rows=24,cols=12}={}){
  const root=new T.Group();root.scale.setScalar(scale);parent.add(root);
  const petals=[];
  for(let layer=0;layer<3;layer++){
   const count=[8,7,6][layer];
   const material=new T.ShaderMaterial({side:T.DoubleSide,transparent:true,depthWrite:false,
-   uniforms:{tint:{value:new T.Color(colors[layer])}},
+   uniforms:{tint:{value:new T.Color(colors[layer])},highlight:{value:highlight?new T.Color(highlight):new T.Vector3(.55,.76,1.)}},
    vertexShader:`varying vec2 v;varying vec3 n,e;void main(){v=uv;vec4 p=modelViewMatrix*vec4(position,1.);n=normalize(normalMatrix*normal);e=-p.xyz;gl_Position=projectionMatrix*p;}`,
-   fragmentShader:`uniform vec3 tint;varying vec2 v;varying vec3 n,e;void main(){float f=pow(1.-abs(dot(normalize(n),normalize(e))),2.3);vec2 q=abs(fract(v*vec2(12.,24.)+.5)-.5);float rib=1.-smoothstep(.025,.095,min(q.x,q.y));float edge=pow(abs(v.x-.5)*2.,7.);float core=exp(-v.y*5.);vec3 c=tint*(.35+.52*f+.42*core)+vec3(.55,.76,1.)*(rib*.21+edge*.25);gl_FragColor=vec4(c,.24+.32*f+rib*.16+edge*.15);}`});
+   fragmentShader:`uniform vec3 tint,highlight;varying vec2 v;varying vec3 n,e;void main(){float f=pow(1.-abs(dot(normalize(n),normalize(e))),2.3);vec2 q=abs(fract(v*vec2(12.,24.)+.5)-.5);float rib=1.-smoothstep(.025,.095,min(q.x,q.y));float edge=pow(abs(v.x-.5)*2.,7.);float core=exp(-v.y*5.);vec3 c=tint*(.35+.52*f+.42*core)+highlight*(rib*.21+edge*.25);gl_FragColor=vec4(c,.24+.32*f+rib*.16+edge*.15);}`});
   for(let petal=0;petal<count;petal++){
    const geo=new T.BufferGeometry(),coords=[],indices=[];
    for(let i=0;i<=rows;i++)for(let j=0;j<=cols;j++){coords.push(j/cols,i/rows);if(i<rows&&j<cols){const k=i*(cols+1)+j;indices.push(k,k+cols+1,k+1,k+1,k+cols+1,k+cols+2);}}

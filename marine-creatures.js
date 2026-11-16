@@ -1,6 +1,6 @@
 import {makeMarineShark} from './marine-shark.js';
 import {makeMarineRelics} from './marine-relics.js';
-import {makeMarineBloom} from './marine-bloom.js';
+import {makeMarineBloom} from './marine-bloom.js?v=jelly-colors-1';
 export function marineCreatures(T,scene,{preview=false}={}){
  const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
  const standard=(color,emissive=color,intensity=.12)=>new T.MeshStandardMaterial({color,emissive,emissiveIntensity:intensity,roughness:.58});
@@ -43,8 +43,35 @@ export function marineCreatures(T,scene,{preview=false}={}){
  const pearl=mesh(oyster,ball,new T.MeshPhysicalMaterial({color:'#ffe6ef',emissive:'#fa85b4',emissiveIntensity:.85,roughness:.18,iridescence:.85,clearcoat:1}),V(),V(.39,.39,.39));
  const pearlBloom=makeMarineBloom(T,oyster,{scale:1.2,colors:['#d58edc','#9da6ff','#ffd6ed']});
  const jelly=group(0,5,-22),jellies=[];
- function makeJelly(parent,scale,phase){const g=new T.Group();g.scale.setScalar(scale);parent.add(g);const bloom=makeMarineBloom(T,g,{scale:1.25});bloom.root.rotation.set(Math.PI*.75,0,.23);const core=mesh(g,ball,new T.MeshPhysicalMaterial({color:'#b7eaff',emissive:'#65acf4',emissiveIntensity:.55,transparent:true,opacity:.37,depthWrite:false,roughness:.24}),V(0,-.1,0),V(.37,.29,.37));const filaments=[];for(let i=0;i<20;i++){const p=new Float32Array(25*3),geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(p,3));const line=new T.Line(geo,new T.LineBasicMaterial({color:i%3?'#8199e6':'#c4eaff',transparent:true,opacity:.65}));line.frustumCulled=false;g.add(line);filaments.push(line);}
- jellies.push({g,bloom,core,filaments,phase});return g;}
+ const jellyPalettes=[
+  ['#ff94ca','#ffc0df','#ffe2f1'],
+  ['#04ade2','#2aded4','#a6f2d2'],
+  ['#ba92f8','#dfa9f7','#f7d2f6']
+ ];
+ function makeJelly(parent,scale,phase){
+  const g=new T.Group();
+  g.scale.setScalar(scale);
+  parent.add(g);
+  const colors=jellyPalettes[phase];
+  const bloom=makeMarineBloom(T,g,{scale:1.25,colors,highlight:colors[2]});
+  bloom.root.rotation.set(Math.PI*.75,0,.23);
+  const coreMaterial=new T.MeshPhysicalMaterial({
+   color:colors[2],emissive:colors[0],
+   emissiveIntensity:.55,transparent:true,opacity:.37,depthWrite:false,roughness:.24
+  });
+  const core=mesh(g,ball,coreMaterial,V(0,-.1,0),V(.37,.29,.37));
+  const filaments=[];
+  for(let i=0;i<20;i++){
+   const geo=new T.BufferGeometry();
+   geo.setAttribute('position',new T.BufferAttribute(new Float32Array(25*3),3));
+   const color=i%3?colors[1]:colors[2];
+   const line=new T.Line(geo,new T.LineBasicMaterial({color,transparent:true,opacity:.65}));
+   line.frustumCulled=false;
+   g.add(line);
+   filaments.push(line);
+  }
+  jellies.push({g,bloom,core,filaments,phase});
+ }
  makeJelly(jelly,1.35,0);makeJelly(jelly,.63,1);makeJelly(jelly,preview?.67:.45,2);
  const shark=preview?null:makeMarineShark(T,scene);
  const values=[0,0,0,0].map(()=>({v:0})),landmarks=[tree,oyster,jelly,shark?.group],unlocked=[false,false,false,false],manual=[null,null,null,null],live=[0,0,0,0];
@@ -66,6 +93,7 @@ export function marineCreatures(T,scene,{preview=false}={}){
    const q=T.MathUtils.smoothstep(s,.3,1);pearlBloom.root.visible=!preview&&q>.01;pearlBloom.root.position.set(0,s*.18,.25);pearlBloom.root.rotation.set(.48,t*.16,0);if(pearlBloom.root.visible)pearlBloom.update(q);
    jellies.forEach(({g,bloom,core,filaments,phase},i)=>{const opening=i===0?.15+jellyOpen*.83:.37+Math.sin(t*1.48+phase)*.23;g.position.set(i===0?0:i===1?(preview?2.6:-3.7):preview?jelly.userData.rightOffset:3.5,Math.sin(t*.45+phase)*.5+i*.9,Math.cos(t*.4+phase)*.65-i*1.4);g.rotation.y=t*.19+phase;g.userData.opening=opening;bloom.update(opening);core.scale.setScalar(.30+opening*.14);filaments.forEach((line,k)=>{const a=k/20*6.28,p=line.geometry.attributes.position,coreRadius=core.scale.x,attachment=(.32+(k%3)*.11)*coreRadius,baseY=core.position.y-coreRadius*.67;for(let j=0;j<25;j++){const u=j/24,spread=(.12+(k%3)*.13)*opening*Math.sin(u*Math.PI*.78),r=attachment+spread;p.setXYZ(j,Math.cos(a)*r+Math.sin(t*1.7-u*6+k)*u*.39,baseY-u*(2.0+k%5*.43),Math.sin(a)*r+Math.cos(t*1.1-u*4+k)*u*.5);}p.needsUpdate=true;});});
    const scan=values[3].v,mouth=shark?.tick(t,scan);live[0]=b;live[1]=s;live[2]=jellyOpen;live[3]=scan;artifacts?.update(t,live,unlocked,highlight,jellies,mouth);
+   return mouth?.open??0;
 
   }
  };

@@ -1,11 +1,12 @@
+import {createRenderQuality} from './render-quality.js?v=garden-clarity-2';
 import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
-import {createPineGeometry,addSnowyBoughs} from './winter-pines.js';
-import {createSeasonPortal} from './season-portal.js?v=resume-view-1';
+import {createPineGeometry,addSnowyBoughs} from './winter-pines.js?v=trail-lod-1';
+import {createSeasonPortal} from './season-portal.js?v=reef-detail-1';
 import * as THREE from './vendor/three.module.js';
-import {createSnowmanHome} from './snowman-home.js?v=winter-home-firs-2';
+import {createSnowmanHome} from './snowman-home.js?v=reef-detail-1';
 import {createGardenCrossing} from './garden-crossing.js?v=trail-controls-2';
 import {playSnowSquall} from './snow-squall.js?v=2';
-import {createAboutStop} from './about-stop.js?v=igloo-entry-4';
+import {createAboutStop} from './about-stop.js?v=deferred-room-1';
 let aboutStop=null,seasonPortal=null,winterApproach=0;
 const restoredView=history.state?.portfolioView;
 const restoredSection=['about','projects','skills'].includes(restoredView?.section)?restoredView.section:null;
@@ -17,9 +18,12 @@ const sectionButtons=[...document.querySelectorAll('[data-section]')];
 function updateCurrentView(){
  const section=pendingSection??(snowmanHome.active?'home':seasonPortal.section);
  const world=snowmanHome.world;
- const viewKey=section+'/'+world;
+ const crossing=section==='projects'&&(pendingSection==='projects'&&!reduced||seasonPortal.crossingGarden);
+ const reefReady=seasonPortal.inMarine;
+ const viewKey=section+'/'+world+'/'+crossing+'/'+reefReady;
  if(viewKey===lastViewKey)return;
  lastViewKey=viewKey;
+ snowmanHome.updateAudio(section,crossing,reefReady);
  for(const button of sectionButtons){
   if(button.dataset.section===section)button.setAttribute('aria-current','page');
   else button.removeAttribute('aria-current');
@@ -31,6 +35,7 @@ const canvas=document.querySelector('#world');
 const compact=matchMedia('(pointer: coarse)').matches || innerWidth<700;
 const renderer=new THREE.WebGLRenderer({canvas,antialias:!compact,powerPreference:'high-performance'});
 renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,compact?.85:1.5));renderer.shadowMap.enabled=!compact;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+const updateRenderQuality=createRenderQuality(renderer,{compact});
 const scene=new THREE.Scene();scene.background=new THREE.Color('#101e33');scene.fog=new THREE.FogExp2('#263c56',.005);
 const camera=new THREE.PerspectiveCamera(66,innerWidth/innerHeight,.08,850);
 const ambient=new THREE.HemisphereLight('#9db8e2','#48546c',1.25);scene.add(ambient);
@@ -48,6 +53,10 @@ const timber=new THREE.MeshStandardMaterial({color:'#655048',map:barkMap,roughne
 const stone=new THREE.MeshStandardMaterial({color:'#727c85',map:stoneMap,bumpMap:stoneMap,bumpScale:.13,roughness:.96});
 const glowMat=new THREE.MeshStandardMaterial({color:'#ffdf9b',emissive:'#ff9c41',emissiveIntensity:2.2,roughness:.2});
 const pineGeometry=createPineGeometry(THREE,rand);
+const distantPineGeometry={
+ foliageCone:new THREE.ConeGeometry(1,1,10,2),
+ boughGeo:new THREE.SphereGeometry(1,6,3)
+};
 const sphere=new THREE.SphereGeometry(1,12,8),cylinder=new THREE.CylinderGeometry(1,1,1,8),cube=new THREE.BoxGeometry(1,1,1);
 const batches=new Map();const dummy=new THREE.Object3D();
 function instance(geo,mat,x,y,z,sx=1,sy=sx,sz=sx,rx=0,ry=0,rz=0){const key=geo.uuid+mat.uuid+':'+Math.floor(z/32);if(!batches.has(key))batches.set(key,{geo,mat,matrices:[]});dummy.position.set(x,y,z);dummy.rotation.set(rx,ry,rz);dummy.scale.set(sx,sy,sz);dummy.updateMatrix();batches.get(key).matrices.push(dummy.matrix.clone());}
@@ -68,7 +77,8 @@ function pine(x,z,h){
  if(z>-64&&z<-28&&x>-10&&x<12)return;
  const y=height(x,z);
  beam(bark,new THREE.Vector3(x,y,z),new THREE.Vector3(x,y+h,z),.12+h*.009);
- addSnowyBoughs({x,y,z,h,geometry:pineGeometry,needles,snow:branchSnow,instance,rand});
+ const detail=Math.abs(x-path(-z).x)<20;
+ addSnowyBoughs({x,y,z,h,geometry:detail?pineGeometry:distantPineGeometry,needles,snow:branchSnow,instance,rand,detail});
  ball(branchSnow,x,y+h*.99,z,.18,.4,.18);
 }
 for(let i=0;i<112;i++){const d=rand(-25,245),p=path(d),side=i%2?1:-1;const x=p.x+side*rand(6.8,95);if(x>5&&x<22&&d>40&&d<170)continue;pine(x,-d,rand(9,21))}
@@ -102,7 +112,7 @@ function snowman(x,z){const y=height(x,z);const snowGlow=new THREE.MeshStandardM
 snowman(path(20).x-3.6,-20);
 // Fully modelled alpine massifs: ridged slopes, exposed rock and snow gullies.
 function terrainNoise(x,z){const ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz,u=fx*fx*(3-2*fx),v=fz*fz*(3-2*fz);const hash=(a,b)=>{const q=Math.sin(a*127.1+b*311.7)*43758.5453;return q-Math.floor(q)};return THREE.MathUtils.lerp(THREE.MathUtils.lerp(hash(ix,iz),hash(ix+1,iz),u),THREE.MathUtils.lerp(hash(ix,iz+1),hash(ix+1,iz+1),u),v);}
-function mountain(cx,cz,radius,peak,index){const geo=new THREE.PlaneGeometry(radius*2,radius*2,100,100);geo.rotateX(-Math.PI/2);const pos=geo.attributes.position,colors=[];for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),r=Math.sqrt(x*x+z*z)/radius,a=Math.atan2(z,x);const spine=1+Math.sin(a*3+index)*.13+Math.sin(a*5+1)*.04;const base=Math.max(0,1-r/spine);const noise=terrainNoise(x*.045,z*.045)*.55+terrainNoise(x*.10,z*.10)*.28+terrainNoise(x*.23,z*.23)*.17;const h=Math.pow(base,1.45)*peak+(noise-.5)*base*(1-base)*peak*.5;pos.setY(i,h);const veins=terrainNoise(x*.11,z*.11)*.65+terrainNoise(x*.3,z*.3)*.35;const snowCover=clamp(.58+base*.3+Math.sin(a*5)*.16-veins*.29,0,1);const rock=new THREE.Color('#344559'),snow=new THREE.Color('#dce6f1');const c=rock.lerp(snow,snowCover>.65?.93:snowCover*.36);if(h>peak*.67)c.lerp(new THREE.Color('#efc8b0'),.18);colors.push(c.r,c.g,c.b);}geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.computeVertexNormals();const m=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,fog:false});const o=object(geo,m,cx,-2,cz);o.castShadow=false;return o;}
+function mountain(cx,cz,radius,peak,index){const geo=new THREE.PlaneGeometry(radius*2,radius*2,68,68);geo.rotateX(-Math.PI/2);const pos=geo.attributes.position,colors=new Float32Array(pos.count*3);const rock=new THREE.Color('#344559'),snow=new THREE.Color('#dce6f1'),peakGlow=new THREE.Color('#efc8b0'),c=new THREE.Color();for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),r=Math.sqrt(x*x+z*z)/radius,a=Math.atan2(z,x);const spine=1+Math.sin(a*3+index)*.13+Math.sin(a*5+1)*.04;const base=Math.max(0,1-r/spine);const noise=terrainNoise(x*.045,z*.045)*.55+terrainNoise(x*.10,z*.10)*.28+terrainNoise(x*.23,z*.23)*.17;const h=Math.pow(base,1.45)*peak+(noise-.5)*base*(1-base)*peak*.5;pos.setY(i,h);const veins=terrainNoise(x*.11,z*.11)*.65+terrainNoise(x*.3,z*.3)*.35;const snowCover=clamp(.58+base*.3+Math.sin(a*5)*.16-veins*.29,0,1);c.copy(rock).lerp(snow,snowCover>.65?.93:snowCover*.36);if(h>peak*.67)c.lerp(peakGlow,.18);c.toArray(colors,i*3);}geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.computeVertexNormals();const m=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,fog:false});const o=object(geo,m,cx,-2,cz);o.castShadow=false;return o;}
 const trailMountains=[
  mountain(-165,-455,155,155,1),
  mountain(12,-510,165,205,2),
@@ -111,7 +121,31 @@ const trailMountains=[
 ];
 // Snow-block igloos, placed where they can be seen from the sleigh route.
 const iceBlock=new THREE.MeshStandardMaterial({color:'#dbe8f0',roughness:.86});const entranceMat=new THREE.MeshStandardMaterial({color:'#172c43',roughness:1});
-function igloo(d,side= -1){const p=path(d),x=p.x+side*8,z=-d,y=height(x,z),r=3.1;for(let row=0;row<7;row++){const theta0=row/7*Math.PI/2+.009,theta1=Math.PI/14-.018;const pieces=Math.max(5,Math.round(24*Math.sin(theta0+theta1*.5)));for(let j=0;j<pieces;j++){const phi=j*Math.PI*2/pieces+(row%2)*Math.PI/pieces;const g=new THREE.SphereGeometry(r,5,3,phi+.012,Math.PI*2/pieces-.024,theta0,theta1);const o=object(g,iceBlock,x,y,z);o.castShadow=false;}}const tunnel=object(new THREE.CylinderGeometry(.95,.95,2.5,20,1,true,0,Math.PI),iceBlock,x,y+.05,z+3);tunnel.rotation.x=Math.PI/2;tunnel.rotation.z=Math.PI/2;const front=object(new THREE.CircleGeometry(.83,24),entranceMat,x,y+.65,z+4.28);front.scale.y=1.1;const lip=object(new THREE.TorusGeometry(.93,.2,7,24,Math.PI),branchSnow,x,y+.1,z+4.3);const light=new THREE.PointLight('#ffc77f',6,8,2);light.position.set(x,y+.8,z+3.5);scene.add(light);ball(branchSnow,x,y-.05,z+4,1.5,.15,2);}
+function buildIglooBlocks(){
+ const positions=[],normals=[],r=3.1;
+ for(let row=0;row<7;row++){
+  const theta0=row/7*Math.PI/2+.009,theta1=Math.PI/14-.018;
+  const pieces=Math.max(5,Math.round(24*Math.sin(theta0+theta1*.5)));
+  for(let j=0;j<pieces;j++){
+   const phi=j*Math.PI*2/pieces+(row%2)*Math.PI/pieces;
+   const block=new THREE.SphereGeometry(r,5,3,phi+.012,Math.PI*2/pieces-.024,theta0,theta1);
+   const position=block.getAttribute('position').array,normal=block.getAttribute('normal').array;
+   for(const index of block.index.array){
+    const i=index*3;
+    positions.push(position[i],position[i+1],position[i+2]);
+    normals.push(normal[i],normal[i+1],normal[i+2]);
+   }
+  }
+ }
+ return new THREE.BufferGeometry()
+  .setAttribute('position',new THREE.Float32BufferAttribute(positions,3))
+  .setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
+}
+const iglooBlocks=buildIglooBlocks();
+function igloo(d,side=-1){
+ const p=path(d),x=p.x+side*8,z=-d,y=height(x,z);
+ object(iglooBlocks,iceBlock,x,y,z).castShadow=false;
+ const tunnel=object(new THREE.CylinderGeometry(.95,.95,2.5,20,1,true,0,Math.PI),iceBlock,x,y+.05,z+3);tunnel.rotation.x=Math.PI/2;tunnel.rotation.z=Math.PI/2;const front=object(new THREE.CircleGeometry(.83,24),entranceMat,x,y+.65,z+4.28);front.scale.y=1.1;const lip=object(new THREE.TorusGeometry(.93,.2,7,24,Math.PI),branchSnow,x,y+.1,z+4.3);const light=new THREE.PointLight('#ffc77f',6,8,2);light.position.set(x,y+.8,z+3.5);scene.add(light);ball(branchSnow,x,y-.05,z+4,1.5,.15,2);}
 igloo(13);igloo(55);igloo(127);
 // Aurora curtains are shader-lit translucent ribbons with continuously changing folds.
 const {aurora:trailAurora,time:trailAuroraTime}=createAurora(THREE);
@@ -119,6 +153,7 @@ scene.add(trailAurora);
 const starGeo=new THREE.BufferGeometry(),starPos=[];for(let i=0;i<1800;i++){const a=rand(0,Math.PI*2),e=rand(.15,1.5),r=650;starPos.push(Math.cos(a)*Math.cos(e)*r,Math.sin(e)*r,Math.sin(a)*Math.cos(e)*r)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPos,3));const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:'#e0ecff',size:.65,transparent:true,opacity:.75,fog:false,sizeAttenuation:true}));scene.add(stars);
 // Batched props retain close-up detail while keeping the number of draw calls low.
 for(const batch of batches.values()){const inst=new THREE.InstancedMesh(batch.geo,batch.mat,batch.matrices.length);batch.matrices.forEach((m,i)=>inst.setMatrixAt(i,m));inst.castShadow=batch.mat!==glowMat;inst.receiveShadow=true;inst.computeBoundingSphere();scene.add(inst)}
+batches.clear();
 // Falling flakes are distributed in several depths around the walking camera.
 const flakeCanvas=document.createElement('canvas');flakeCanvas.width=flakeCanvas.height=64;const fc=flakeCanvas.getContext('2d'),fg=fc.createRadialGradient(32,32,0,32,32,30);fg.addColorStop(0,'rgba(255,255,255,1)');fg.addColorStop(.32,'rgba(255,255,255,.8)');fg.addColorStop(1,'rgba(255,255,255,0)');fc.fillStyle=fg;fc.fillRect(0,0,64,64);const flakeMap=new THREE.CanvasTexture(flakeCanvas);
 const crystalCanvas=document.createElement('canvas');crystalCanvas.width=crystalCanvas.height=96;const cc=crystalCanvas.getContext('2d');cc.translate(48,48);cc.strokeStyle='rgba(245,251,255,.95)';cc.lineWidth=2.2;cc.lineCap='round';for(let arm=0;arm<6;arm++){cc.save();cc.rotate(arm*Math.PI/3);cc.beginPath();cc.moveTo(0,0);cc.lineTo(0,-37);for(const y of [-17,-27]){cc.moveTo(0,y);cc.lineTo(-7,y+7);cc.moveTo(0,y);cc.lineTo(7,y+7);}cc.stroke();cc.restore();}const crystalMap=new THREE.CanvasTexture(crystalCanvas);
@@ -141,7 +176,7 @@ const dialog=document.querySelector('#detail'),veil=document.querySelector('#vei
 function go(n){if(n===0){quickHome();return;}close();seasonPortal?.cancel();window.scrollTo({top:[0,.43,.87][n]*(document.documentElement.scrollHeight-innerHeight),behavior:reduced?'instant':'smooth'});}document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(+b.dataset.go));document.querySelector('#indexBtn').onclick=()=>{open('<span class="kicker">WINTER / THE FIELD GUIDE</span><h2>Take the<br>scenic route.</h2><p>Scroll to ride. Settle into the sleigh and follow two reindeer through the winter landscape.</p><button class="guide-btn" data-dest="0">01 &nbsp; Snowfall sleigh ride <span>↗</span></button><button class="guide-btn" data-dest="1">02 &nbsp; Lantern village <span>↗</span></button><button class="guide-btn" data-dest="2">03 &nbsp; Northern lights <span>↗</span></button><p class="note">Winter is the current focus. Autumn and spring are preserved in the earlier prototype.</p>');dialog.querySelectorAll('[data-dest]').forEach(b=>b.onclick=()=>go(+b.dataset.dest));};document.querySelector('#motionBtn').textContent=paused?'Resume snowfall ▷':'Pause snowfall Ⅱ';document.querySelector('#motionBtn').onclick=()=>{paused=!paused;document.querySelector('#motionBtn').textContent=paused?'Resume snowfall ▷':'Pause snowfall Ⅱ';};
 aboutStop=createAboutStop({THREE,scene,camera,team,sled,path,onResume(value){target=current=value;lastD=2+value*192;window.scrollTo({top:value*(document.documentElement.scrollHeight-innerHeight),behavior:'instant'});}});
 let portalGeneration=0;
-seasonPortal=createSeasonPortal({THREE,renderer,camera,winterScene:scene,path,aboutStop,onWinterReturn(value){
+seasonPortal=createSeasonPortal({THREE,renderer,camera,winterScene:scene,path,aboutStop,onGardenRide:(speed,water)=>snowmanHome.updateGardenRide(speed,water),onGardenChime:side=>snowmanHome.playGardenChime(side),onWhirlpool:()=>snowmanHome.playTransition('whirlpool'),onReefCue:(cue,side)=>snowmanHome.playReefCue(cue,side),onWinterReturn(value){
  aboutStop.resumeFromPortal(value);
  target=current=value;lastD=2+value*192;
  window.scrollTo({top:value*(document.documentElement.scrollHeight-innerHeight),behavior:'instant'});
@@ -192,12 +227,12 @@ async function openLandscape(key){
  }
 }
 // Each implemented portfolio destination owns its arrival approach.
-const snowmanHome=createSnowmanHome({renderer,reduced,initialWorld:restoredWorld,trailMountains,winterScene:scene,onVisibility:active=>{team.visible=sled.visible=!active;},onFrame:(dt,t)=>{for(const field of snowFields)field.points.visible=false;},onExplore:button=>enterWinter(button),onProjects:()=>openLandscape('projects'),onSkills:()=>openLandscape('skills')});
+const snowmanHome=createSnowmanHome({renderer,reduced,initialWorld:restoredWorld,initialActive:!restoredSection,trailMountains,onVisibility:active=>{team.visible=sled.visible=!active;},onExplore:button=>enterWinter(button),onProjects:()=>openLandscape('projects'),onSkills:()=>openLandscape('skills')});
 let navTransition=null,navShade=null;
 const stopStormScroll=event=>{if(document.querySelector(".snow-squall"))event.preventDefault();};
 addEventListener("wheel",stopStormScroll,{passive:false});
 addEventListener("touchmove",stopStormScroll,{passive:false});
-function cancelNavTransition(){pendingSection=null;portalGeneration++;gardenEntrance?.hide();document.body.classList.remove('garden-departure');portalStatus.hidden=true;navTransition?.kill();navShade?.remove();navTransition=navShade=null;winterApproach=0;}
+function cancelNavTransition(){snowmanHome.stopTransition();pendingSection=null;portalGeneration++;gardenEntrance?.hide();document.body.classList.remove('garden-departure');portalStatus.hidden=true;navTransition?.kill();navShade?.remove();navTransition=navShade=null;winterApproach=0;}
 function enterWinter(button){
  if(navTransition)return;
  cancelNavTransition();
@@ -212,6 +247,7 @@ function enterWinter(button){
  if(reduced){arrive();return;}
  const rect=button.getBoundingClientRect();
  const origin={x:(rect.left+rect.width/2)/innerWidth,y:(rect.top+rect.height/2)/innerHeight};
+ snowmanHome.playTransition('snow');
  navTransition=playSnowSquall(gsap,origin,arrive,distance=>{winterApproach=distance;},()=>{winterApproach=0;navTransition=null;});
 }
 function quickHome(){cancelNavTransition();navShade=document.createElement('div');navShade.className='quick-nav-shade';document.body.append(navShade);const shade=navShade;navTransition=gsap.timeline({onComplete:()=>{shade.remove();navTransition=navShade=null;}}).to(shade,{opacity:1,duration:reduced?0:.28,ease:'power1.inOut'}).call(()=>{close();aboutStop.resetJourney();seasonPortal?.cancel();target=current=0;lastD=2;snowmanHome.setActive(true);window.scrollTo({top:0,behavior:'instant'});document.querySelector('[data-section="home"]').focus({preventScroll:true});}).to(shade,{opacity:0,duration:reduced?0:.72,ease:'power2.out'});}
@@ -219,9 +255,8 @@ const portfolioDestinations={home:{available:true,arrive:quickHome},about:{avail
 document.querySelectorAll('[data-section]').forEach(button=>{button.onclick=()=>{const key=button.dataset.section,destination=portfolioDestinations[key];if(!destination?.available)return;if(key==='home'){quickHome();return;}if(key==='projects'||key==='skills'){destination.arrive();return;}if(!navTransition)destination.arrive(button);};});
 document.querySelector('header .brand').onclick=e=>{e.preventDefault();quickHome();};
 function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden)return;if(!paused)time+=dt;const roomScene=aboutStop.interiorScene;
- if(aboutStop.reading||aboutStop.complete)seasonPortal.prefetch();
- const desiredRatio=Math.min(devicePixelRatio,roomScene?1.75:compact?.85:1.5);
- if(renderer.getPixelRatio()!==desiredRatio)renderer.setPixelRatio(desiredRatio);
+ if(!snowmanHome.active&&!roomScene&&!seasonPortal.active&&aboutStop.complete&&target>=seasonPortal.gate-.05)seasonPortal.prefetch();
+ updateRenderQuality(raw,Boolean(roomScene),seasonPortal.section==='projects'&&!seasonPortal.crossingGarden);
  if(snowmanHome.active){snowmanHome.tick(dt,time,raw);updateCurrentView();gardenEntrance?.render(renderer);return;}
  if(roomScene&&!seasonPortal?.active){
   aboutStop.tick(dt,time,Math.min(raw,.75));
@@ -229,9 +264,20 @@ function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=
   renderer.render(aboutStop.interiorScene??scene,camera);
   gardenEntrance?.render(renderer);
   return;
- }current=target;const d=2+current*192,p=path(d),ahead=path(d+18);const moving=clamp(Math.abs(d-lastD)/Math.max(dt,.001)/1.2,0,1);lastD=d;const gait=reduced?0:Math.sin(d*5)*.025*moving;
+ }
+ if(seasonPortal.inDestination){
+  seasonPortal.tick(dt,time,Math.min(raw,.12));
+  updateCurrentView();
+  const destination=seasonPortal.scene;
+  if(destination){
+   renderer.render(destination,camera);
+   seasonPortal.renderCrossing(gardenEntrance);
+   return;
+  }
+ }
+ current=target;const d=2+current*192,p=path(d),ahead=path(d+18);const moving=clamp(Math.abs(d-lastD)/Math.max(dt,.001)/1.2,0,1);lastD=d;const gait=reduced?0:Math.sin(d*5)*.025*moving;
  const cameraPath=path(d-winterApproach);camera.position.set(cameraPath.x,2.8+gait*.25,cameraPath.z);camera.lookAt(ahead.x,3.1+current*.8,ahead.z);const teamP=path(d+6.8),teamNext=path(d+10);team.position.set(teamP.x,0,teamP.z);team.rotation.y=Math.atan2(-(teamNext.x-teamP.x),-(teamNext.z-teamP.z));locomotion=THREE.MathUtils.damp(locomotion,moving,4,dt);if(!paused)stride+=dt*5.2*locomotion;animalLegs.forEach(({pivot,knee,phase})=>{const cycle=stride+phase;pivot.rotation.x=reduced?0:Math.sin(cycle)*.29*locomotion;knee.rotation.x=reduced?0:Math.max(0,Math.cos(cycle))*.38*locomotion;});team.position.y=reduced?0:Math.sin(stride*2)*.006*locomotion;sled.rotation.z=reduced?0:Math.sin(d*2)*.004*moving;
  moon.position.set(p.x-65,85,p.z+35);moon.target.position.set(p.x,0,p.z-30);moon.target.updateMatrixWorld();if(Math.abs(d-shadowAt)>12){renderer.shadowMap.needsUpdate=true;shadowAt=d;}for(const lamp of lamps)lamp.light.visible=Math.abs(lamp.z-p.z)<40;for(const field of snowFields){field.points.position.set(p.x,0,p.z);if(!paused){const a=field.points.geometry.attributes.position.array;for(let i=0;i<field.speeds.length;i++){a[i*3]+=dt*(.35+Math.sin(time*.35+i)*.2);a[i*3+1]-=dt*field.speeds[i];if(a[i*3+1]<-.3){a[i*3+1]=18;a[i*3]=rand(-30,30)}if(a[i*3]>32)a[i*3]=-32;}field.points.geometry.attributes.position.needsUpdate=true;}}
  trailAuroraTime.value=reduced?0:time;waterUniforms.time.value=time;setZone(current<.31?0:current<.69?1:2);document.body.classList.toggle('walking',current>.035);if(!document.body.classList.contains('garden-departure')&&!seasonPortal?.active&&!aboutStop.active&&!aboutStop.complete&&target>=aboutStop.gate)target=aboutStop.check(target,current);if(!seasonPortal?.active)aboutStop.tick(dt,time,Math.min(raw,.75));seasonPortal?.check(current);seasonPortal?.tick(dt,time,Math.min(raw,.12));if(seasonPortal?.hideTeam){team.visible=false;sled.visible=false;}else if(!aboutStop.active){team.visible=true;sled.visible=true;}for(const field of snowFields)field.points.visible=!aboutStop.active&&!seasonPortal?.hideTeam;updateCurrentView();renderer.render(seasonPortal?.scene||aboutStop.interiorScene||scene,camera);if(!seasonPortal?.renderCrossing(gardenEntrance))gardenEntrance?.render(renderer);frames++;elapsed+=raw;if(frames%90===0)document.body.dataset.performance=JSON.stringify({fps:Math.round(frames/elapsed),draws:renderer.info.render.calls,triangles:renderer.info.render.triangles,progress:current});}
-if(restoredSection)portfolioDestinations[restoredSection].arrive(sectionButtons.find(button=>button.dataset.section===restoredSection));
+if(restoredSection&&restoredSection!=='about')portfolioDestinations[restoredSection].arrive(sectionButtons.find(button=>button.dataset.section===restoredSection));
 animate();addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();scrollUpdate()});gsap.to('#loading',{opacity:0,duration:.22,onComplete:()=>document.querySelector('#loading').remove()});
