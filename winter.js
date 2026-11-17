@@ -1,7 +1,7 @@
 import {createRenderQuality} from './render-quality.js?v=garden-clarity-2';
 import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
 import {createPineGeometry,addSnowyBoughs} from './winter-pines.js?v=trail-lod-1';
-import {createSeasonPortal} from './season-portal.js?v=reef-release-1';
+import {createSeasonPortal} from './season-portal.js?v=reef-navbar-release-1';
 import * as THREE from './vendor/three.module.js';
 import {createSnowmanHome} from './snowman-home.js?v=gpu-budget-1';
 import {createGardenCrossing} from './garden-crossing.js?v=trail-controls-2';

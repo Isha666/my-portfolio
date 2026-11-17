@@ -4,7 +4,7 @@ body{margin:0}
 a{color:inherit;text-underline-offset:.25em}
 button{font:inherit;cursor:pointer}
 :focus-visible{outline:3px solid #f6d68a;outline-offset:5px}
-header{position:fixed;inset:0 0 auto;z-index:2;display:flex;justify-content:space-between;padding:14px clamp(16px,4vw,64px);background:transparent;text-shadow:0 1px 6px #101a13}
+header{position:fixed;inset:0 0 auto;z-index:2;display:flex;justify-content:space-between;padding:14px clamp(16px,4vw,64px);background:rgb(0 0 0 / 16%);text-shadow:0 1px 6px #101a13}
  .caption a,.treasure>span:last-child{display:inline-block;background:#18251ce8;padding:12px 17px;border-radius:24px}
 .shot{height:150svh}
 .frame{height:100svh;position:sticky;top:0;overflow:hidden;isolation:isolate;background:#263e28}

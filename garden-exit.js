@@ -35,14 +35,17 @@ export function createGardenExit(THREE,garden,camera,renderer,onWhirlpool,onReef
  let marine,vortex,reefRequest,requestGeneration=0,unlockedSkills=[];
  function prepare(){
   if(marine)return Promise.resolve();
-  reefRequest??=Promise.all([import('./marine-world.js?v=reef-release-1'),import('./marine-vortex.js?v=soft-particles-1')])
+  if(reefRequest)return reefRequest;
+  const generation=requestGeneration;
+  const request=Promise.all([import('./marine-world.js?v=reef-release-1'),import('./marine-vortex.js?v=soft-particles-1')])
    .then(([{createMarineWorld},{createMarineVortex}])=>{
-    if(lifetime.signal.aborted)return;
+    if(lifetime.signal.aborted||generation!==requestGeneration)return;
     marine=createMarineWorld(THREE,camera,returnToGarden,{onReefCue});
     marine.restoreSkills(unlockedSkills);
     vortex=createMarineVortex(THREE,camera,marine.scene);
-   }).finally(()=>{reefRequest=null;});
-  return reefRequest;
+   }).finally(()=>{if(reefRequest===request)reefRequest=null;});
+  reefRequest=request;
+  return request;
  }
  const portalView=new THREE.PerspectiveCamera(60,1,.08,220),portalTexture=new THREE.WebGLRenderTarget(innerWidth<700?256:448,innerWidth<700?256:448);
  const windowMesh=new THREE.Mesh(new THREE.CircleGeometry(2.55,96),new THREE.MeshBasicMaterial({map:portalTexture.texture,toneMapped:false}));windowMesh.position.z=.021;windowMesh.visible=false;root.add(windowMesh);
@@ -96,7 +99,7 @@ export function createGardenExit(THREE,garden,camera,renderer,onWhirlpool,onReef
   get active(){return active},
   get entering(){return diving},
   get busy(){return drawing||diving||whirling||!!transition},
-  reset(){requestGeneration++;transition?.kill();transition=null;gsap.killTweensOf(dive);gsap.killTweensOf(veil);diving=drawing=whirling=active=false;document.body.classList.remove('marine-diving');windowMesh.visible=false;portalSurface.visible=true;vortex?.settle(0);spell.hide();marine?.leave();ui.hidden=true;veil.style.opacity=0;camera.fov=66;camera.updateProjectionMatrix();},
+  reset(keepReef=false){requestGeneration++;reefRequest=null;transition?.kill();transition=null;gsap.killTweensOf(dive);gsap.killTweensOf(veil);diving=drawing=whirling=active=false;document.body.classList.remove('marine-diving');windowMesh.visible=false;portalSurface.visible=true;vortex?.settle(0);spell.hide();if(keepReef)marine?.leave();else{releasePortalView();releaseReef();}ui.hidden=true;veil.style.opacity=0;camera.fov=66;camera.updateProjectionMatrix();},
   tick(dt,time,distance,inGarden){
    uniforms.time.value=time;canEnter=inGarden&&!active&&!drawing&&!diving&&!transition&&distance>=102;ui.hidden=!canEnter;rim.material.opacity=.65+Math.sin(time)*.22;
    if(active){vortex.settle(time);marine.tick(dt,time);return;}
