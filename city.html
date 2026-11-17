@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>City After Dark | Isha</title>
+ <link rel="stylesheet" href="city.css?v=1">
+ <script type="module" src="city.js?v=3"></script>
+</head>
+<body>
+ <canvas id="cityView" aria-label="A plum coupe on a neon waterfront boulevard"></canvas>
+ <header class="city-header"><a href="./" aria-label="Portfolio home">isha <span>✦</span></a><a href="./?section=skills">Return to reef ↗</a><button id="citySound" aria-pressed="false">Sound off</button></header>
+ <main>
+  <section class="street-ui" aria-label="City drive">
+   <div class="city-intro"><p>Leadership &amp; Achievements</p><h1>City After Dark</h1></div>
+   <div class="drive"><span id="driveHint">Scroll or swipe to drive</span><div class="drive-buttons"><button id="reverse" aria-label="Drive backward">↓</button><button id="forward" aria-label="Drive forward">↑</button></div><button id="enterTower">Enter the Leadership Tower ↗</button></div>
+  </section>
+  <dialog id="tower" aria-labelledby="towerTitle">
+   <div class="tower-nav"><span>Leadership Tower</span><button id="leaveTower">Return to car ↗</button></div>
+   <div class="tower-body">
+    <nav aria-label="Elevator floors"><span class="floor-label">ELEVATOR</span><div id="floorButtons"></div></nav>
+    <div class="elevator-stage">
+     <div class="floor-number" aria-hidden="true"><span id="floorDisplay">G</span><span>↑</span></div>
+     <div id="floorArt" aria-hidden="true"></div>
+     <div class="floor-copy" aria-live="polite"><p id="floorOrg">Waterfront district</p><h2 id="towerTitle">Take the elevator</h2><p id="floorStory">Choose a floor to explore a role.</p><button id="replayFloor" hidden>Replay animation</button></div>
+     <div class="lift-doors" aria-hidden="true"><i></i><i></i></div>
+    </div>
+   </div>
+  </dialog>
+  <div id="pressureLift" aria-hidden="true" hidden><div class="lift-glass"></div><div class="lift-frame"></div><span>WATERFRONT ASCENT</span></div>
+ </main>
+</body>
+</html>
