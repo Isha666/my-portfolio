@@ -1,7 +1,17 @@
 export function createHomeAudio(button){
  const tracks=['winter.mp3?v=carol-1','garden-birds.mp3?v=3','underwater.mp3','garden-portal.mp3?v=2','garden-birds.mp3?v=3','garden-hooves.mp3?v=3','garden-water.mp3','garden-chest.mp3','snow-squall.mp3','whirlpool.mp3?v=2','reef-ambience.mp3?v=2','reef-tree-near.mp3?v=3','reef-oyster.mp3','reef-jellyfish.mp3','reef-shark.mp3?v=3','reef-tree-wake.mp3?v=2'];
  const buffers=new Map();
- let context,master,current,world=0,enabled=false,active=true,request=0;
+ let context,master,current,world=0,enabled=false,active=true,request=0,audioScreen='';
+ function storedSound(key){
+  try{return localStorage.getItem('portfolio-sound:'+key);}catch{return null;}
+ }
+ function rememberSound(){
+  try{
+   const value=enabled?'on':'off';
+   localStorage.setItem('portfolio-sound:last',value);
+   if(audioScreen)localStorage.setItem('portfolio-sound:'+audioScreen,value);
+  }catch{}
+ }
 
  const portalTrack=3;
  const projectsTrack=4,reefTrack=10;
@@ -103,7 +113,8 @@ export function createHomeAudio(button){
   const version=++request;
   if(!context)return;
   if(!enabled||document.hidden)stopTransition();
-  const shouldPlay=enabled&&active&&!document.hidden;
+  const introOpen=document.querySelector('#homeIntro[open]:not(.intro-revealing)');
+  const shouldPlay=enabled&&active&&!document.hidden&&!introOpen;
   gardenPlaying=shouldPlay&&world===projectsTrack;
   const nextReef=shouldPlay&&world===reefTrack;
   if(nextReef!==reefPlaying)reefSession++;
@@ -149,8 +160,9 @@ export function createHomeAudio(button){
   }
  }
 
- button.onclick=async()=>{
-  enabled=!enabled;
+ async function setEnabled(value,remember=false){
+  enabled=value;
+  if(remember)rememberSound();
   button.setAttribute('aria-pressed',String(enabled));
   button.textContent=enabled?'Sound on':'Sound off';
   if(enabled){
@@ -162,7 +174,7 @@ export function createHomeAudio(button){
      master.connect(context.destination);
     }
     await context.resume();
-    for(const track of [portalTrack,...Object.values(transitions)])loadTrack(track).catch(()=>{});
+    for(const track of [world,portalTrack,...Object.values(transitions)])loadTrack(track).catch(()=>{});
    }catch(error){
     enabled=false;
     button.setAttribute('aria-pressed','false');
@@ -171,7 +183,18 @@ export function createHomeAudio(button){
    }
   }
   sync();
- };
+ }
+ button.onclick=()=>setEnabled(!enabled,true);
+ addEventListener('portfolio-intro-audio',()=>{if(!enabled)setEnabled(true,true);});
+ addEventListener('portfolio-intro-reveal',()=>{
+  if(document.querySelector('#homeIntro')?.dataset.introSound==='on'&&!enabled)setEnabled(true,true);
+  else sync();
+ });
+ function resumeAfterGesture(){
+  if(enabled&&context?.state==='suspended')context.resume().then(sync).catch(()=>{});
+ }
+ addEventListener('pointerdown',resumeAfterGesture,{passive:true});
+ addEventListener('keydown',resumeAfterGesture);
  document.addEventListener('visibilitychange',sync);
  return {
   playTransition,stopTransition,
@@ -215,6 +238,13 @@ export function createHomeAudio(button){
    world=section==='skills'&&reefReady?reefTrack:section==='projects'?(crossing?portalTrack:projectsTrack):homeWorld;
    active=section==='home'||section==='projects'||section==='skills'&&reefReady;
    button.hidden=!(active||section==='skills');
+   const key=section==='home'?'home-'+homeWorld:section;
+   if(key!==audioScreen){
+    audioScreen=key;
+    const preference=storedSound(key)??storedSound('last');
+    const desired=preference===null?enabled:preference==='on';
+    if(desired!==enabled||desired&&!context){setEnabled(desired);return;}
+   }
    sync();
   }
  };

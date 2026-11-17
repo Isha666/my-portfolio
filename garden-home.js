@@ -207,26 +207,10 @@ export function createGardenHome(){
   oval(pupil,shine,.038,-.027,.065,.012,.014,.01);
   eyes.push({pupil,white,x:side*.30});
  }
- const tag=document.createElement('canvas');
- tag.width=512;
- tag.height=256;
- const ctx=tag.getContext('2d');
- ctx.fillStyle='#fff1cb';
- ctx.fillRect(0,0,512,256);
- ctx.strokeStyle='#b68d54';
- ctx.lineWidth=9;
- ctx.strokeRect(12,12,488,232);
- ctx.textAlign='center';
- ctx.fillStyle='#483a2d';
- ctx.font='600 26px system-ui';
- ctx.fillText('HELLO, MY NAME IS',256,65);
- ctx.font='bold 53px Georgia';
- ctx.fillText('Isha',256,131);
- ctx.fillText('Venkataraman',256,197);
- const tagTexture=new T.CanvasTexture(tag);
- tagTexture.colorSpace=T.SRGBColorSpace;
- const nameTag=add(fox,new T.PlaneGeometry(.78,.39),new T.MeshStandardMaterial({map:tagTexture}),0,1.01,.68);
+ const nameTag=new T.Object3D();
+ nameTag.position.set(0,1.01,.68);
  nameTag.rotation.z=-.07;
+ fox.add(nameTag);
  const butterflies=createGardenButterflies(T,scene,8,()=>[0,.7+random()*2.7,-4+random()*6]);
  const opening=(time,phase)=>T.MathUtils.smoothstep(.5+.5*Math.sin(time*.85+phase),.12,.86);
  let gazeX=0,gazeY=0;
@@ -280,5 +264,6 @@ export function createGardenHome(){
    wings[1].rotation.y=-flap;
   });
   renderer.render(scene,camera);
+  return {tag:nameTag,camera,width:.78,height:.39};
  }};
 }

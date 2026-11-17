@@ -1,3 +1,4 @@
+import {disposeScene} from './scene-resources.js?v=shadow-cleanup-1';
 import {createGardenCrossing} from './garden-crossing.js?v=trail-controls-2';
 export function createSeasonPortal({THREE,renderer,camera,winterScene,path,aboutStop,onWinterReturn,onGardenRide,onGardenChime,onWhirlpool,onReefCue}){
  const gate=.315,at=path(78),center=new THREE.Vector3(at.x,4,-78),root=new THREE.Group();root.position.copy(center);winterScene.add(root);let state='winter',hold=0,downAt=null,travel=0,autumnDistance=0,gardenTravel=0,suppressUntil=0;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;let seed=81;const rnd=()=>{seed=seed*16807%2147483647;return(seed-1)/2147483646},range=(a,b)=>a+(b-a)*rnd();
@@ -13,7 +14,7 @@ export function createSeasonPortal({THREE,renderer,camera,winterScene,path,about
  function loadGarden(){
   if(gardenRequest)return gardenRequest;
   if(garden)return gardenWarmup??Promise.resolve();
-  gardenRequest??=Promise.all([import('./botanical-garden.js?v=flower-growth-2'),import('./garden-exit.js?v=reef-detail-1')])
+  gardenRequest??=Promise.all([import('./botanical-garden.js?v=gpu-budget-1'),import('./garden-exit.js?v=reef-release-1')])
    .then(([{createBotanicalGarden},{createGardenExit}])=>{
     garden=createBotanicalGarden(THREE,camera,onGardenChime);
     ({scene:autumn,falling}=garden);
@@ -58,6 +59,22 @@ export function createSeasonPortal({THREE,renderer,camera,winterScene,path,about
    aperture.material.color.set('#ffffff');
    aperture.material.needsUpdate=true;
   }
+ }
+ function releaseGarden(){
+  if(state!=='winter'||gardenRequest||!garden)return;
+  gardenExit?.dispose();
+  garden.dispose();
+  for(const sprig of rimPlants){
+   sprig.removeFromParent();
+   sprig.traverse(object=>object.material?.dispose());
+  }
+  rimPlants.length=0;
+  aperture.material.map=null;
+  aperture.material.needsUpdate=true;
+  target.dispose();
+  disposeScene(autumn);
+  garden=autumn=falling=gardenExit=gardenWarmup=null;
+  previewReady=false;
  }
  let prefetchRetry=0;
  function prefetch(){
@@ -142,7 +159,7 @@ export function createSeasonPortal({THREE,renderer,camera,winterScene,path,about
 
  addEventListener('wheel',e=>{if(gardenExit?.active||e.ctrlKey)return;if(retreatFromPortal(e.deltaY)){e.preventDefault();return;}if(garden?.projectOpen){if(e.target.closest?.('#treasureDialog'))return;e.preventDefault();return;}if(state==='autumn'||(state==='crossing'&&travel>=.56)){e.preventDefault();if(!gardenExit.active&&!gardenExit.busy&&!garden.projectOpen)autumnDistance=Math.max(0,Math.min(128,autumnDistance+e.deltaY*.014));}else if(['ready','crossing','returning'].includes(state))e.preventDefault();},{passive:false});
  let touchY=null;addEventListener('touchstart',e=>{if(['ready','autumn','crossing'].includes(state))touchY=e.touches[0]?.clientY;},{passive:true});addEventListener('touchmove',e=>{if(touchY!==null&&retreatFromPortal(touchY-(e.touches[0]?.clientY??touchY))){if(e.cancelable)e.preventDefault();return;}if((state!=='autumn'&&(state!=='crossing'||travel<.56))||gardenExit.active||gardenExit.busy||garden.projectOpen||touchY===null)return;const y=e.touches[0]?.clientY;if(y===undefined)return;autumnDistance=Math.max(0,Math.min(128,autumnDistance+(touchY-y)*.035));touchY=y;if(e.cancelable)e.preventDefault();},{passive:false});addEventListener('touchend',()=>touchY=null);
- return {gate,prefetch,renderCrossing(navEntrance){if(state!=='crossing'&&!revealingGarden)return false;(flowers??navEntrance)?.render(renderer);return true;},async prepare(key){await loadGarden();if(key==='skills')await gardenExit.prepare();},get inDestination(){return state==='autumn';},get crossingGarden(){return state==='crossing'||revealingGarden;},get inMarine(){return !!gardenExit?.active},get section(){if(gardenExit?.active||gardenExit?.entering)return 'skills';if(state==='autumn'||state==='crossing')return 'projects';return 'about';},enterMarine(){cancel();state='autumn';autumnDistance=gardenTravel=124;arrival.hidden=true;arrival.classList.add('exploring');document.body.classList.add('in-autumn');teamVisibility(false);gardenExit.enterThroughVortex();},enterGarden(covered){const reuse=covered===flowers;cancel();if(reuse)covered.show(revealAt);crossToGarden(false,covered);},get scene(){if(gardenExit?.scene)return gardenExit.scene;return state==='autumn'||state==='crossing'&&travel>=revealAt||state==='returning'&&travel<.45?autumn:null;},get active(){return state!=='winter';},get hideTeam(){return ['crossing','autumn','returning'].includes(state);},cancel,check(value){if(aboutStop.active)return value;if(state==='winter'&&value>=gate&&aboutStop.complete&&performance.now()>suppressUntil)activate();return ['ready','crossing','returning'].includes(state)?Math.min(value,gate):value;},tick(dt,time,frameDelta=dt){returnButton.hidden=state!=='autumn'||revealingGarden||gardenExit.active||gardenExit.busy||garden.projectOpen;if(state==='crossing'){tickCrossing(dt,time,frameDelta);return;}
+ return {gate,prefetch,releaseGarden,renderCrossing(navEntrance){if(state!=='crossing'&&!revealingGarden)return false;(flowers??navEntrance)?.render(renderer);return true;},async prepare(key){await loadGarden();if(key==='skills')await gardenExit.prepare();},get inDestination(){return state==='autumn';},get crossingGarden(){return state==='crossing'||revealingGarden;},get inMarine(){return !!gardenExit?.active},get section(){if(gardenExit?.active||gardenExit?.entering)return 'skills';if(state==='autumn'||state==='crossing')return 'projects';return 'about';},enterMarine(){cancel();state='autumn';autumnDistance=gardenTravel=124;arrival.hidden=true;arrival.classList.add('exploring');document.body.classList.add('in-autumn');teamVisibility(false);gardenExit.enterThroughVortex();},enterGarden(covered){const reuse=covered===flowers;cancel();if(reuse)covered.show(revealAt);crossToGarden(false,covered);},get scene(){if(gardenExit?.scene)return gardenExit.scene;return state==='autumn'||state==='crossing'&&travel>=revealAt||state==='returning'&&travel<.45?autumn:null;},get active(){return state!=='winter';},get hideTeam(){return ['crossing','autumn','returning'].includes(state);},cancel,check(value){if(aboutStop.active)return value;if(state==='winter'&&value>=gate&&aboutStop.complete&&performance.now()>suppressUntil)activate();return ['ready','crossing','returning'].includes(state)?Math.min(value,gate):value;},tick(dt,time,frameDelta=dt){returnButton.hidden=state!=='autumn'||revealingGarden||gardenExit.active||gardenExit.busy||garden.projectOpen;if(state==='crossing'){tickCrossing(dt,time,frameDelta);return;}
  if(revealingGarden){
   travel=Math.min(1,travel+frameDelta/4.0);
   flowers.paint(travel);

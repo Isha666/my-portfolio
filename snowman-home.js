@@ -1,8 +1,8 @@
 import {disposeScene} from './scene-resources.js';
-import {createHomeAudio} from './home-audio.js?v=reef-detail-1';
+import {createHomeAudio} from './home-audio.js?v=audio-preferences-1';
 import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
 import {createPineGeometry,addSnowyBoughs} from './winter-pines.js';
-import {createGardenHome} from './garden-home.js?v=miniature-7';
+import {createGardenHome} from './garden-home.js?v=sharp-tags-1';
 import * as THREE from './vendor/three.module.js';
 
 export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkills,initialWorld=0,initialActive=true,trailMountains,onVisibility}){
@@ -207,39 +207,33 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  soundButton.setAttribute('aria-pressed','false');
  const homeAudio=createHomeAudio(soundButton);
  document.body.append(soundButton);
+ const sceneNameplate=document.createElement('div');
+ sceneNameplate.className='home-scene-name';
+ sceneNameplate.innerHTML='<small>Hello, my name is</small><strong>Isha<br>Venkataraman</strong>';
+ sceneNameplate.hidden=true;
+ ui.append(sceneNameplate);
+ const tagCenter=new THREE.Vector3(),tagRight=new THREE.Vector3(),tagTop=new THREE.Vector3();
+ function placeSceneNameplate({tag,camera,width,height},uiRect){
+  if(!tag.visible)return;
+  tag.localToWorld(tagCenter.set(0,0,0)).project(camera);
+  tag.localToWorld(tagRight.set(width/2,0,0)).project(camera);
+  tag.localToWorld(tagTop.set(0,height/2,0)).project(camera);
+  const dx=(tagRight.x-tagCenter.x)*innerWidth,dy=(tagCenter.y-tagRight.y)*innerHeight;
+  sceneNameplate.style.left=((tagCenter.x+1)*innerWidth/2-uiRect.left)+'px';
+  sceneNameplate.style.top=((1-tagCenter.y)*innerHeight/2-uiRect.top)+'px';
+  sceneNameplate.style.width=Math.hypot(dx,dy)+'px';
+  sceneNameplate.style.height=Math.hypot((tagTop.x-tagCenter.x)*innerWidth,(tagTop.y-tagCenter.y)*innerHeight)+'px';
+  sceneNameplate.style.transform='translate(-50%,-50%) rotate('+Math.atan2(dy,dx)+'rad)';
+  sceneNameplate.hidden=false;
+ }
  const worldName=selector.querySelector('span');
- let progress=0,target=0;
- let blendTarget=null;
- const blendSize=new THREE.Vector2();
- const blendScene=new THREE.Scene();
- const blendCamera=new THREE.Camera();
- const blendMaterial=new THREE.ShaderMaterial({
-  transparent:true,depthTest:false,depthWrite:false,
-  uniforms:{nextImage:{value:null},progress:{value:0}},
-  vertexShader:`varying vec2 screenUV;
-   void main(){screenUV=uv;gl_Position=vec4(position.xy,0.,1.);}`,
-  fragmentShader:`uniform sampler2D nextImage;
-   uniform float progress;
-   varying vec2 screenUV;
-   void main(){
-    float edge=1.15-progress*1.30+sin(screenUV.y*5.0)*.025;
-    float reveal=smoothstep(edge-.105,edge+.105,screenUV.x);
-    gl_FragColor=vec4(texture2D(nextImage,screenUV).rgb,reveal);
-    #include <colorspace_fragment>
-   }`
- });
- const blendQuad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),blendMaterial);
- blendQuad.frustumCulled=false;
- blendScene.add(blendQuad);
+ let progress=0,target=0,arrowMove=null,queuedSteps=0;
+ const drawingSize=new THREE.Vector2(),previousScissor=new THREE.Vector4();
  const worldIndex=value=>THREE.MathUtils.euclideanModulo(value,worlds.length);
  function releasePreviews(keep){
   if(keep!==1){garden?.dispose();garden=null;}
   if(keep!==2){marine?.dispose();marine=null;}
-  if(keep!==0){
-   blendTarget?.dispose();
-   blendTarget=null;
-   blendMaterial.uniforms.nextImage.value=null;
-  }
+  if(keep!==0){winter?.dispose();winter=null;}
  }
  function setProgress(value){
   target=value;
@@ -248,10 +242,10 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   if(first+worldIndex(1-first)<=last)garden??=createGardenHome();
   const reefOnRoute=first+worldIndex(2-first)<=last;
   if(reefOnRoute&&!marine&&!marineLoad){
-   marineLoad=import('./marine-home.js?v=render-budget-1').then(({createMarineHome})=>{
+   marineLoad=import('./marine-home.js?v=sharp-tags-1').then(({createMarineHome})=>{
     if(active)marine=createMarineHome();
    }).catch(error=>{
-    target=Math.round(progress);
+    arrowMove=null;queuedSteps=0;target=Math.round(progress);
     console.error('Could not load underwater Home',error);
    }).finally(()=>{marineLoad=null;});
   }
@@ -278,8 +272,14 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  }
  const [previous,next]=selector.querySelectorAll('button');
  function stepWorld(direction){
-  const stop=direction>0?Math.floor(target)+1:Math.ceil(target)-1;
+  if(arrowMove){queuedSteps=THREE.MathUtils.clamp(queuedSteps+direction,-2,2);return;}
+  const stop=direction>0?Math.floor(progress)+1:Math.ceil(progress)-1;
+  arrowMove={from:progress,elapsed:0};
   setProgress(stop);
+ }
+ function interruptArrow(){
+  if(arrowMove)target=progress;
+  arrowMove=null;queuedSteps=0;
  }
  previous.onclick=()=>stepWorld(-1);
  next.onclick=()=>stepWorld(1);
@@ -293,6 +293,7 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   if(!delta)return;
   event.preventDefault();
   const unit=event.deltaMode===1?16:event.deltaMode===2?innerHeight:1;
+  interruptArrow();
   setProgress(target+THREE.MathUtils.clamp(delta*unit/620,-1,1));
  },{passive:false});
  addEventListener('touchstart',event=>{
@@ -304,7 +305,11 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   const touch=event.touches[0];
   if(!active||!swipe||!touch)return;
   const dx=swipe.x-touch.clientX,dy=swipe.y-touch.clientY;
-  if(Math.abs(dx)>Math.max(14,Math.abs(dy)))swipe.horizontal=true;
+  if(!swipe.horizontal&&Math.abs(dx)>Math.max(14,Math.abs(dy))){
+   interruptArrow();
+   swipe.start=progress;
+   swipe.horizontal=true;
+  }
   if(swipe.horizontal)setProgress(swipe.start+THREE.MathUtils.clamp(dx/Math.min(innerWidth*.8,420),-1,1));
  },{passive:true});
  addEventListener('touchend',()=>swipe=null);
@@ -312,8 +317,14 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  updateSelectedWorld();
  function point(e){if(!active)return;tx=THREE.MathUtils.clamp((e.clientX-eyeScreenX)/Math.min(150,innerWidth*.21),-1,1);ty=THREE.MathUtils.clamp((eyeScreenY-e.clientY)/Math.min(145,innerHeight*.20),-1,1);lastMove=performance.now();}
  addEventListener('touchmove',e=>{if(!active||e.target.closest?.('header'))return;const touch=e.touches[0];if(touch){point(touch);if(e.cancelable)e.preventDefault();}},{passive:false});addEventListener('touchstart',e=>{if(active&&e.touches[0])point(e.touches[0]);},{passive:true});addEventListener('pointermove',point);addEventListener('pointerdown',point);addEventListener('keydown',e=>{if(!active)return;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){if(!e.repeat)stepWorld(e.key==='ArrowRight'?1:-1);e.preventDefault();return;}const directions={ArrowUp:[0,1],ArrowDown:[0,-1]};if(directions[e.key]){[tx,ty]=directions[e.key];lastMove=performance.now();e.preventDefault();}});
+ addEventListener('portfolio-intro-reveal',()=>{
+  if(!active)return;
+  enteredAt=performance.now()-350;
+  lastMove=enteredAt;
+  ui.classList.remove('name-visible','explore-visible');
+ });
  portal.onclick=event=>worlds[selectedWorld].open(event.currentTarget);
- function setActive(value){active=value;if(!value){progress=target=worldIndex(Math.round(progress));releasePreviews(-1);winter?.dispose();winter=null;}ui.hidden=!value;renderer.domElement.setAttribute('aria-label',value?'A waving snowman with eyes that follow your pointer, in a snowy winter forest':'A first-person reindeer sleigh ride through a snow-covered forest with igloos and alpine mountains');document.body.classList.toggle('on-snowman-home',value);document.body.style.overflow=value?'hidden':'';onVisibility(value);if(value){const destination=target;progress=0;setProgress(destination);selectedWorld=-1;updateSelectedWorld();tx=ty=0;lastMove=enteredAt=performance.now();ui.classList.remove('name-visible','explore-visible');}}
+ function setActive(value){active=value;if(!value){interruptArrow();progress=target=worldIndex(Math.round(progress));releasePreviews(-1);ui.style.removeProperty('--home-reveal-edge');}ui.hidden=!value;renderer.domElement.setAttribute('aria-label',value?'A waving snowman with eyes that follow your pointer, in a snowy winter forest':'A first-person reindeer sleigh ride through a snow-covered forest with igloos and alpine mountains');document.body.classList.toggle('on-snowman-home',value);document.body.style.overflow=value?'hidden':'';onVisibility(value);if(value){const destination=target;progress=0;setProgress(destination);selectedWorld=-1;updateSelectedWorld();tx=ty=0;lastMove=enteredAt=performance.now();ui.classList.remove('name-visible','explore-visible');}}
  setActive(initialActive);
  if(initialWorld&&initialActive){
   const startingTarget=initialWorld===2?-1:initialWorld;
@@ -326,8 +337,14 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  if(!initialActive)progress=target=initialWorld;
  return {get active(){return active;},get world(){return marineLoad&&!marine&&initialWorld===2&&target===-1?2:selectedWorld;},setActive,updateAudio(section,crossing,reefReady){homeAudio.update(section,selectedWorld,crossing,reefReady);},playReefCue:homeAudio.playReefCue,updateGardenRide:homeAudio.updateGardenRide,playGardenChime:homeAudio.playGardenChime,playTransition:homeAudio.playTransition,stopTransition:homeAudio.stopTransition,tick(dt,t,frameDelta=dt){if(!active)return;
  const readyTarget=marine||!marineLoad?target:THREE.MathUtils.clamp(target,0,1);
- progress=reduced?readyTarget:THREE.MathUtils.damp(progress,readyTarget,7,Math.min(frameDelta,.16));
- if(Math.abs(progress-readyTarget)<.009)progress=readyTarget;
+ if(arrowMove&&readyTarget===target){
+  arrowMove.elapsed+=reduced?.66:Math.min(frameDelta,.05);
+  progress=THREE.MathUtils.lerp(arrowMove.from,target,THREE.MathUtils.smoothstep(arrowMove.elapsed,0,.66));
+  if(arrowMove.elapsed>=.66){progress=target;arrowMove=null;}
+ }else if(!arrowMove){
+  progress=reduced?readyTarget:THREE.MathUtils.damp(progress,readyTarget,7,Math.min(frameDelta,.16));
+  if(Math.abs(progress-readyTarget)<.009)progress=readyTarget;
+ }
  if(progress===target&&!swipe){
   const offset=target-worldIndex(target);
   progress-=offset;
@@ -373,7 +390,12 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   paw.rotation.x=lift*.62;
  });
  bunnyShadow.position.set(bunny.position.x,-.191,bunny.position.z);
- renderer.render(scene,camera);
+ // Preserve the bright winter grade directly on the main canvas.
+ const toneMapping=renderer.toneMapping;
+ try{
+  renderer.toneMapping=THREE.NoToneMapping;
+  renderer.render(scene,camera);
+ }finally{renderer.toneMapping=toneMapping;}
  }
  function renderWorld(index){
   if(index===0){
@@ -382,50 +404,46 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   }
   const lookingAtPortal=(portalHovered||document.activeElement===portal)&&intro>=2.65;
   if(index===1){
-   garden.render(renderer,dt,t,gazeX,gazeY,lookingAtPortal,reduced,intro,idle);
+   const tagPose=garden.render(renderer,dt,t,gazeX,gazeY,lookingAtPortal,reduced,intro,idle);
+   if(progress%1===0)placeSceneNameplate(tagPose,uiRect);
    return;
   }
   const pose=marine.render(renderer,dt,t,gazeX,gazeY,lookingAtPortal,reduced,intro,idle);
   if(selectedWorld!==2)return;
+  if(progress%1===0)placeSceneNameplate(pose,uiRect);
   portalUI.style.setProperty('--reef-x',((pose.portalPoint.x+1)*innerWidth/2-uiRect.left)+'px');
   portalUI.style.setProperty('--reef-y',((1-pose.portalPoint.y)*innerHeight/2-uiRect.top)+'px');
   portalUI.style.setProperty('--reef-size',pose.portalSize+'px');
   portalUI.style.setProperty('--reef-reveal',pose.portalReveal);
-  nameplate.style.left=((pose.badge.x+1)*innerWidth/2-uiRect.left)+'px';
-  nameplate.style.top=((1-pose.badge.y)*innerHeight/2-uiRect.top)+'px';
-  nameplate.style.transform='translate(-50%,-50%) rotate(-4deg) scale('+pose.scale+')';
   eyeScreenX=(pose.gazePoint.x+1)*innerWidth/2;
   eyeScreenY=(1-pose.gazePoint.y)*innerHeight/2;
  }
- function compositeWorld(index,reveal){
-  const size=renderer.getDrawingBufferSize(blendSize);
-  if(progress%1!==0){
-   const scale=Math.min(1,Math.sqrt(900000/(size.x*size.y)));
-   size.multiplyScalar(scale).floor();
-  }
-  if(!blendTarget)blendTarget=new THREE.WebGLRenderTarget(size.x,size.y);
-  else if(blendTarget.width!==size.x||blendTarget.height!==size.y)blendTarget.setSize(size.x,size.y);
-  const previousTarget=renderer.getRenderTarget(),autoClear=renderer.autoClear;
-  try{
-   renderer.setRenderTarget(blendTarget);
-   renderer.autoClear=true;
-   renderWorld(index);
-   renderer.setRenderTarget(previousTarget);
-   renderer.autoClear=reveal===1;
-   blendMaterial.uniforms.nextImage.value=blendTarget.texture;
-   blendMaterial.uniforms.progress.value=reveal;
-   renderer.render(blendScene,blendCamera);
-  }finally{
-   renderer.setRenderTarget(previousTarget);
-   renderer.autoClear=autoClear;
-  }
- }
  const lower=Math.floor(progress),mix=progress-lower;
  const baseWorld=worldIndex(lower);
- // Use the same offscreen pass and color conversion as the left-scroll reveal.
- if(baseWorld===0)compositeWorld(baseWorld,1);
- else renderWorld(baseWorld);
- if(mix!==0)compositeWorld(worldIndex(lower+1),mix);
- else if(progress===target&&!swipe)releasePreviews(baseWorld);
+ sceneNameplate.hidden=true;
+ renderWorld(baseWorld);
+ if(mix!==0){
+  // Each world uses its own identical color path whether clipped or settled.
+  const {x:width,y:height}=renderer.getSize(drawingSize);
+  const edge=Math.round(width*(1-mix)),scissorWasEnabled=renderer.getScissorTest();
+  renderer.getScissor(previousScissor);
+  try{
+   renderer.setScissor(edge,0,width-edge,height);
+   renderer.setScissorTest(true);
+   renderWorld(worldIndex(lower+1));
+  }finally{
+   renderer.setScissor(previousScissor);
+   renderer.setScissorTest(scissorWasEnabled);
+  }
+  ui.style.setProperty('--home-reveal-edge',((1-mix)*100)+'%');
+ }else{
+  ui.style.removeProperty('--home-reveal-edge');
+  if(progress===target&&!swipe)releasePreviews(baseWorld);
+ }
+ if(!arrowMove&&queuedSteps){
+  const direction=Math.sign(queuedSteps);
+  queuedSteps-=direction;
+  stepWorld(direction);
+ }
  }};
 }

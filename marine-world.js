@@ -1,11 +1,15 @@
+import {marineParticleMap} from './marine-particle-map.js';
+import {disposeScene} from './scene-resources.js';
 import {makeMarineDiscoveries} from './marine-discoveries.js?v=oyster-home-1';
 import {makeMarineLife} from './marine-life.js';
 import {makeFishSchool} from './marine-fish.js';
-import {marineCreatures} from './marine-creatures.js?v=reef-jaw-1';
+import {marineCreatures} from './marine-creatures.js?v=reef-release-1';
 
 import {reefSkills as skills,peopleSkills,treeSkills as branchSkills} from './marine-skills.js';
 
 export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}){
+ const lifetime=new AbortController();
+ const listen=(type,handler,options)=>window.addEventListener(type,handler,{...options,signal:lifetime.signal});
  const scene=new T.Scene();scene.background=new T.Color('#020b29');scene.fog=new T.FogExp2('#061649',.024);
  const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
  scene.add(new T.HemisphereLight('#5b85ff','#120d35',1.2));
@@ -40,7 +44,7 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
  const fans=new T.InstancedMesh(new T.CylinderGeometry(.60,1,1,6),new T.MeshStandardMaterial({color:'#fff',roughness:.72}),branches.length),axis=V(0,1,0);
  branches.forEach(({p,end,r,color},i)=>{const d=end.clone().sub(p);dummy.position.copy(p).lerp(end,.5);dummy.quaternion.setFromUnitVectors(axis,d.clone().normalize());dummy.scale.set(r,d.length(),r);dummy.updateMatrix();fans.setMatrixAt(i,dummy.matrix);fans.setColorAt(i,color);});
  for(let i=0;i<155;i++){const p=patches[(i*11)%Math.min(210,rockCount)];dummy.position.set(p.x+(rnd()-.5)*p.sz,-4+p.sz*.45,p.z+(rnd()-.5)*p.sz);dummy.rotation.set((rnd()-.5)*.55,rnd()*6,(rnd()-.5)*.6);dummy.scale.set(.48+rnd()*.43,.35+rnd()*.65,.48+rnd()*.43);dummy.updateMatrix();sponge.setMatrixAt(i,dummy.matrix);}scene.add(fans,sponge);
- const specks=new Float32Array(660*3);for(let i=0;i<specks.length;i+=3)specks.set([(rnd()-.5)*85,rnd()*20-4,-rnd()*65+8],i);const dustGeo=new T.BufferGeometry();dustGeo.setAttribute('position',new T.BufferAttribute(specks,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:'#9bdaf3',size:.065,transparent:true,opacity:.42,depthWrite:false}));scene.add(dust);
+ const specks=new Float32Array(660*3);for(let i=0;i<specks.length;i+=3)specks.set([(rnd()-.5)*85,rnd()*20-4,-rnd()*65+8],i);const dustGeo=new T.BufferGeometry();dustGeo.setAttribute('position',new T.BufferAttribute(specks,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:'#9bdaf3',map:marineParticleMap(T),size:.073,transparent:true,opacity:.42,depthWrite:false}));scene.add(dust);
  const fishRoutes=[
   [-5,-10,1.8,10],[6,5,2.2,8],[-15,-16,2.4,7],[15,-15,.9,7],
   [0,-30,3.3,8],[-21,-2,3.8,6],[22,-1,2.5,6],[0,16,3.4,6],
@@ -75,6 +79,7 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
  const map=hud.querySelector('.marine-map'),card=hud.querySelector('.marine-card'),intro=hud.querySelector('.marine-intro'),mapButton=hud.querySelector('[data-map]');
  const markers=skills.map(({name,place},i)=>{const b=document.createElement('button');b.innerHTML=`<small>${place}</small>${name}`;b.onclick=()=>approach(i);hud.querySelector('.marine-markers').append(b);return b;});
  const pos=V(0,2.8,14),velocity=V(),wheelCurrent=V(),look=new T.Euler(0,0,0,'YXZ');let active=false,selected=-1,near=-1,glide=null,pointer=null,interacted=false;
+ const onCanvas=(type,handler)=>canvas.addEventListener(type,handler,{signal:lifetime.signal});
  const keys=new Set(),moveKeys=new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyC']),canvas=document.querySelector('#world'),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  function clearMovement(){keys.clear();axisInput.set(0,0);thumb.style.transform='';stickPointer=null;pointer=null;canvas.classList.remove('marine-gripping');velocity.set(0,0,0);wheelCurrent.set(0,0,0);}
  function closeCard(){if(selected>=0)creature.activate(selected,false);selected=-1;creature.selectBranch(-1);card.hidden=true;}
@@ -158,17 +163,17 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
 
  hud.querySelector('[data-return]').onclick=onReturn;
  function interrupt(){glide?.kill();glide=null;near=-1;if(!interacted){interacted=true;intro.hidden=true;}}
- addEventListener('keydown',e=>{if(!active)return;if(e.key==='Escape'){closeCard();setMap(false);interrupt();return;}if(!moveKeys.has(e.code)||e.target.closest?.('input,textarea')||(e.code==='Space'&&e.target.closest?.('button')))return;e.preventDefault();interrupt();keys.add(e.code);});
- addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',clearMovement);
+ listen('keydown',e=>{if(!active)return;if(e.key==='Escape'){closeCard();setMap(false);interrupt();return;}if(!moveKeys.has(e.code)||e.target.closest?.('input,textarea')||(e.code==='Space'&&e.target.closest?.('button')))return;e.preventDefault();interrupt();keys.add(e.code);});
+ listen('keyup',e=>keys.delete(e.code));listen('blur',clearMovement);
  function pickRelic(){let best=null,dist=Infinity;for(const {root,n,tool} of creature.smallRocks){if(!root.parent.visible)continue;const p=root.getWorldPosition(V());if(p.distanceTo(pos)>15)continue;if(ray.ray.intersectSphere(new T.Sphere(p,.36),hit)&&hit.distanceToSquared(pos)<dist){best=[0,n,tool];dist=hit.distanceToSquared(pos);}}for(const {root,i,n} of creature.relics){if(!root.visible)continue;const p=root.getWorldPosition(V());if(p.distanceTo(pos)>13)continue;if(ray.ray.intersectSphere(new T.Sphere(p,i===0?1.13:.6),hit)&&hit.distanceToSquared(pos)<dist){best=[i,n];dist=hit.distanceToSquared(pos);}}return best;}
  function pick(x,y){ray.setFromCamera(new T.Vector2(x/innerWidth*2-1,1-y/innerHeight*2),camera);let best=-1,dist=Infinity;for(let i=0;i<4;i++){const p=anchor(i);if(ray.ray.intersectSphere(new T.Sphere(p,[3.4,2.35,2.25,2.8][i]),hit)&&hit.distanceToSquared(pos)<dist){dist=hit.distanceToSquared(pos);best=i;}}return best;}
- canvas.addEventListener('pointerdown',e=>{if(!active)return;const i=pick(e.clientX,e.clientY);interrupt();const object=i>=0&&(anchor(i).distanceTo(pos)<11||selected===i)?i:-1;pointer={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,i,object,relic:pickRelic(),actor:discoveries.actors.findIndex(a=>a.p.distanceTo(pos)<16&&ray.ray.intersectSphere(new T.Sphere(a.p,a.radius),hit)),amount:object>=0?creature.amount(object):0};canvas.setPointerCapture(e.pointerId);if(object>=0)canvas.classList.add('marine-gripping');});
- canvas.addEventListener('pointermove',e=>{if(!active)return;ray.setFromCamera(new T.Vector2(e.clientX/innerWidth*2-1,1-e.clientY/innerHeight*2),camera);creature.cursor(ray.ray);
+ onCanvas('pointerdown',e=>{if(!active)return;const i=pick(e.clientX,e.clientY);interrupt();const object=i>=0&&(anchor(i).distanceTo(pos)<11||selected===i)?i:-1;pointer={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,i,object,relic:pickRelic(),actor:discoveries.actors.findIndex(a=>a.p.distanceTo(pos)<16&&ray.ray.intersectSphere(new T.Sphere(a.p,a.radius),hit)),amount:object>=0?creature.amount(object):0};canvas.setPointerCapture(e.pointerId);if(object>=0)canvas.classList.add('marine-gripping');});
+ onCanvas('pointermove',e=>{if(!active)return;ray.setFromCamera(new T.Vector2(e.clientX/innerWidth*2-1,1-e.clientY/innerHeight*2),camera);creature.cursor(ray.ray);
  if(pointer?.id!==e.pointerId)return;const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,i=pointer.object;if(i<0){look.y-=dx*.004;look.x=T.MathUtils.clamp(look.x-dy*.004,-1.54,1.54);}else if(Math.hypot(e.clientX-pointer.startX,e.clientY-pointer.startY)>5){creature.manipulate(i,dx,i===1||i===2?0:dy);if(i===1||i===2)creature.scrub(i,pointer.amount+(pointer.startY-e.clientY)/115);}
  pointer.x=e.clientX;pointer.y=e.clientY;});
- canvas.addEventListener('pointerleave',()=>creature.cursor(null));
- canvas.addEventListener('pointerup',e=>{if(pointer?.id!==e.pointerId)return;const {i,object,relic,actor,startX,startY}=pointer,tap=Math.hypot(e.clientX-startX,e.clientY-startY)<6;pointer=null;canvas.classList.remove('marine-gripping');if(tap){if(actor>=0){discoveries.tap(actor);return;}if(ray.ray.intersectSphere(new T.Sphere(anchorGroup.position,.9),hit)&&anchorGroup.position.distanceTo(pos)<13){showSkill(2);return;}if(relic){inspectRelic(...relic);return;}if(i<0)return;if(selected===i){closeCard();return;}approach(i);return;}if(object<0)return;if(object===1||object===2){if(creature.amount(object)>.18)showSkill(object);else{creature.release(object);closeCard();}}else showSkill(object);});
- for(const type of ['pointercancel','lostpointercapture'])canvas.addEventListener(type,e=>{if(pointer?.id===e.pointerId){pointer=null;canvas.classList.remove('marine-gripping');}});
+ onCanvas('pointerleave',()=>creature.cursor(null));
+ onCanvas('pointerup',e=>{if(pointer?.id!==e.pointerId)return;const {i,object,relic,actor,startX,startY}=pointer,tap=Math.hypot(e.clientX-startX,e.clientY-startY)<6;pointer=null;canvas.classList.remove('marine-gripping');if(tap){if(actor>=0){discoveries.tap(actor);return;}if(ray.ray.intersectSphere(new T.Sphere(anchorGroup.position,.9),hit)&&anchorGroup.position.distanceTo(pos)<13){showSkill(2);return;}if(relic){inspectRelic(...relic);return;}if(i<0)return;if(selected===i){closeCard();return;}approach(i);return;}if(object<0)return;if(object===1||object===2){if(creature.amount(object)>.18)showSkill(object);else{creature.release(object);closeCard();}}else showSkill(object);});
+ for(const type of ['pointercancel','lostpointercapture'])onCanvas(type,e=>{if(pointer?.id===e.pointerId){pointer=null;canvas.classList.remove('marine-gripping');}});
  function steer(e){const r=stick.getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;axisInput.set(x,y).divideScalar(r.width*.32);if(axisInput.length()>1)axisInput.normalize();thumb.style.transform=`translate(${axisInput.x*22}px,${axisInput.y*22}px)`;}
  stick.onpointerdown=e=>{e.preventDefault();interrupt();stickPointer=e.pointerId;stick.setPointerCapture(e.pointerId);steer(e);};
  stick.onpointermove=e=>{if(e.pointerId===stickPointer)steer(e);};
@@ -177,9 +182,9 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
  let targetFov=66;
  function zoom(delta){targetFov=T.MathUtils.clamp(targetFov+delta,33,92);}
  hud.querySelectorAll('[data-zoom]').forEach(b=>b.onclick=()=>zoom(b.dataset.zoom==='in'?-8:8));
- addEventListener('wheel',e=>{if(!active||e.target.closest?.('.marine-card,.marine-map'))return;e.preventDefault();if(e.ctrlKey||e.metaKey){zoom(e.deltaY*.065);return;}interrupt();const factor=e.deltaMode===1?16:e.deltaMode===2?innerHeight:1;wheelCurrent.add(V(e.deltaX*factor*.029,0,-e.deltaY*factor*.029).applyEuler(look)).clampLength(0,16);},{passive:false});
+ listen('wheel',e=>{if(!active||e.target.closest?.('.marine-card,.marine-map'))return;e.preventDefault();if(e.ctrlKey||e.metaKey){zoom(e.deltaY*.065);return;}interrupt();const factor=e.deltaMode===1?16:e.deltaMode===2?innerHeight:1;wheelCurrent.add(V(e.deltaX*factor*.029,0,-e.deltaY*factor*.029).applyEuler(look)).clampLength(0,16);},{passive:false});
  const direction=V(),screen=V(),ray=new T.Raycaster(),hit=new T.Vector3();
- return {scene,enter(preserve=false){active=true;jawOpen=false;inCueRange.fill(false);targetFov=66;hud.hidden=false;document.body.classList.add('in-marine');if(preserve){pos.copy(camera.position);look.setFromQuaternion(camera.quaternion,'YXZ');look.z=0;}else{pos.set(0,2.8,8);look.set(0,0,0);}near=-1;interacted=false;intro.hidden=false;setMap(false);closeCard();clearMovement();document.activeElement?.blur();},leave(){active=false;hud.hidden=true;document.body.classList.remove('in-marine');creature.cursor(null);interrupt();clearMovement();closeCard();setMap(false);},tick(dt,t){
+ return {scene,dispose(){lifetime.abort();interrupt();creature.dispose();hud.remove();disposeScene(scene);},unlockedSkills:creature.unlockedSkills,restoreSkills:creature.restoreSkills,enter(preserve=false){active=true;jawOpen=false;inCueRange.fill(false);targetFov=66;hud.hidden=false;document.body.classList.add('in-marine');if(preserve){pos.copy(camera.position);look.setFromQuaternion(camera.quaternion,'YXZ');look.z=0;}else{pos.set(0,2.8,8);look.set(0,0,0);}near=-1;interacted=false;intro.hidden=false;setMap(false);closeCard();clearMovement();document.activeElement?.blur();},leave(){active=false;hud.hidden=true;document.body.classList.remove('in-marine');creature.cursor(null);interrupt();clearMovement();closeCard();setMap(false);},tick(dt,t){
  const jaw=animateReef(dt,t);
  direction.set(Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft')),Number(keys.has('Space'))-Number(keys.has('KeyC')),Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp')));
  direction.x+=axisInput.x;direction.z+=axisInput.y;if(direction.length()>1)direction.normalize();direction.multiplyScalar(7).applyEuler(look);velocity.lerp(direction,1-Math.exp(-dt*6));if(!glide)pos.addScaledVector(velocity,dt).addScaledVector(wheelCurrent,dt);wheelCurrent.multiplyScalar(Math.exp(-dt*5.5));pos.clamp(V(-31,-2.6,-44),V(31,12,23));

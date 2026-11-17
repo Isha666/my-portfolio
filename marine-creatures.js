@@ -77,6 +77,9 @@ export function marineCreatures(T,scene,{preview=false}={}){
  const values=[0,0,0,0].map(()=>({v:0})),landmarks=[tree,oyster,jelly,shark?.group],unlocked=[false,false,false,false],manual=[null,null,null,null],live=[0,0,0,0];
  const artifacts=preview?null:makeMarineRelics(T,landmarks),inverse=new T.Matrix4();let gust=0,hover=0,highlight=-1;
  return {landmarks,
+  dispose(){for(const value of values)gsap.killTweensOf(value);},
+  unlockedSkills(){return unlocked.flatMap((on,index)=>on?[index]:[]);},
+  restoreSkills(indices){for(const i of indices){unlocked[i]=true;values[i].v=1;}},
   amount(i){return manual[i]??live[i];},isUnlocked(i){return unlocked[i];},
   relics:artifacts?.relics,smallRocks:artifacts?.smallRocks,
   cursor(ray){hover=ray?1:0;if(ray){tree.updateWorldMatrix(true,false);inverse.copy(tree.matrixWorld).invert();treeUniforms.rayOrigin.value.copy(ray.origin).applyMatrix4(inverse);treeUniforms.rayDirection.value.copy(ray.direction).transformDirection(inverse);}},

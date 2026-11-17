@@ -1,9 +1,10 @@
+import {marineParticleMap} from './marine-particle-map.js';
 // A damped radial current carries the camera and the debris in the same field.
 export function createMarineVortex(T,camera,scene){
  const funnel=new T.Group();funnel.position.y=14.5;scene.add(funnel);const depthScale=.90;funnel.scale.y=depthScale;
  const count=2100,positions=new Float32Array(count*3),colors=new Float32Array(count*3),particles=[];
  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(positions,3));geo.setAttribute('color',new T.BufferAttribute(colors,3));
- const points=new T.Points(geo,new T.PointsMaterial({vertexColors:true,size:.065,transparent:true,opacity:.8,depthWrite:false,blending:T.AdditiveBlending}));points.frustumCulled=false;funnel.add(points);
+ const points=new T.Points(geo,new T.PointsMaterial({vertexColors:true,map:marineParticleMap(T),size:.073,transparent:true,opacity:.8,depthWrite:false,blending:T.AdditiveBlending}));points.frustumCulled=false;funnel.add(points);
  const petals=new T.InstancedMesh(new T.SphereGeometry(1,8,5),new T.MeshBasicMaterial({color:'#ffc4d8',transparent:true,depthWrite:false}),90);petals.frustumCulled=false;funnel.add(petals);
  const dummy=new T.Object3D();
  const streaks=new Float32Array(count*6),streakGeo=new T.BufferGeometry();streakGeo.setAttribute('position',new T.BufferAttribute(streaks,3));

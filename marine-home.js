@@ -41,6 +41,16 @@ export function createMarineHome(){
   turtle.add(plate);
  }
  oval(turtle,skin,0,-.16,-1.05,.12,.11,.25);
+ // Fasten the cord and the name tag to the turtle's neck in scene space.
+ const cord=new T.MeshStandardMaterial({color:'#bde3d2',roughness:.66});
+ const necklace=new T.CatmullRomCurve3([
+  [-.22,.22,.65],[-.29,.13,.81],[-.20,-.015,.96],[0,-.16,1.04],
+  [.20,-.015,.96],[.29,.13,.81],[.22,.22,.65],[0,.28,.61]
+ ].map(point=>new T.Vector3(...point)),true);
+ turtle.add(new T.Mesh(new T.TubeGeometry(necklace,48,.018,6,true),cord));
+ const tag=new T.Object3D();
+ tag.position.set(0,-.34,1.045);
+ turtle.add(tag);
  const head=new T.Group();
  head.position.set(0,.17,.70);
  turtle.add(head);
@@ -89,7 +99,7 @@ export function createMarineHome(){
  oyster.add(portalMesh);
  const portalPoint=new T.Vector3(),portalEdge=new T.Vector3();
  let open=.93;
- const badge=new T.Vector3(),gazePoint=new T.Vector3();
+ const gazePoint=new T.Vector3();
  let gazeX=0,gazeY=0;
  return {dispose(){disposeScene(scene);},render(renderer,dt,t,x,y,portal,reduced,intro,idle){
   const aspect=innerWidth/innerHeight;
@@ -137,12 +147,12 @@ export function createMarineHome(){
    pivot.rotation.y=side*Math.cos(stroke)*.25;
   }
   turtle.updateMatrixWorld(true);
-  turtle.localToWorld(badge.set(0,-.29,.78)).project(camera);
+  tag.visible=intro>1.25||reduced;
   head.localToWorld(gazePoint.set(0,.23,.68)).project(camera);
   oyster.updateMatrixWorld(true);
   portalMesh.getWorldPosition(portalPoint).project(camera);
   portalMesh.localToWorld(portalEdge.set(.76,0,0)).project(camera);
   renderer.render(scene,camera);
-  return {badge,gazePoint,portalPoint,portalSize:Math.abs(portalEdge.x-portalPoint.x)*innerWidth,portalReveal:portalOpening.value,scale:Math.min(.95,innerHeight/870)};
+  return {tag,camera,width:.69,height:.40,gazePoint,portalPoint,portalSize:Math.abs(portalEdge.x-portalPoint.x)*innerWidth,portalReveal:portalOpening.value};
  }};
 }
