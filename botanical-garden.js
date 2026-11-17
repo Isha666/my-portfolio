@@ -8,9 +8,47 @@ import {createProjectTreasures} from './project-treasures.js?v=scene-lifetime-1'
 import {createGardenCarriage} from './garden-carriage.js?v=route-heading-1';
 export function createBotanicalGarden(THREE,camera,onGardenChime){
  let seed=427;const rnd=()=>{seed=seed*16807%2147483647;return(seed-1)/2147483646},rand=(a,b)=>a+(b-a)*rnd();
- const scene=new THREE.Scene();scene.background=new THREE.Color('#a9d7e8');scene.fog=new THREE.FogExp2('#d3ddce',.0065);
- scene.add(new THREE.HemisphereLight('#e6f1ff','#34502a',1.5));const sun=new THREE.DirectionalLight('#ffe6b2',2.7);sun.position.set(-24,35,12);sun.castShadow=true;sun.shadow.mapSize.set(1536,1536);Object.assign(sun.shadow.camera,{left:-34,right:34,top:40,bottom:-85,near:.1,far:160});sun.target.position.set(0,0,-30);scene.add(sun,sun.target);sun.shadow.normalBias=.04;
- const sky=new THREE.Mesh(new THREE.SphereGeometry(190,40,24),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,vertexShader:'varying vec3 vDir;void main(){vDir=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`varying vec3 vDir;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}void main(){vec3 d=normalize(vDir);float h=max(d.y,0.);vec3 col=mix(vec3(.85,.89,.75),vec3(.35,.67,.86),pow(h,.55));vec2 uv=d.xz/(max(.13,d.y))*1.6;float n=noise(uv)*.55+noise(uv*2.)*.26+noise(uv*4.)*.13+noise(uv*8.)*.06;float cloud=smoothstep(.49,.72,n)*smoothstep(.04,.22,d.y);col=mix(col,vec3(1.,.97,.89),cloud*.85);float sun=pow(max(0.,dot(d,normalize(vec3(-.6,.5,.3)))),90.);col+=vec3(.3,.22,.10)*sun;gl_FragColor=vec4(col,1.);}` }));sky.position.z=-40;scene.add(sky);
+ const scene=new THREE.Scene();scene.background=new THREE.Color('#b0dcea');scene.fog=new THREE.FogExp2('#dce7f0',.0060);
+ scene.add(new THREE.HemisphereLight('#eff7ff','#445936',1.68));const sun=new THREE.DirectionalLight('#fff0c8',3.1);sun.position.set(-24,35,12);sun.castShadow=true;sun.shadow.mapSize.set(1536,1536);Object.assign(sun.shadow.camera,{left:-34,right:34,top:40,bottom:-85,near:.1,far:160});sun.target.position.set(0,0,-30);scene.add(sun,sun.target);sun.shadow.normalBias=.04;sun.shadow.autoUpdate=false;sun.shadow.needsUpdate=true;
+ // Render the sky at infinity so neither the portal camera nor the ride can clip it.
+ const sky=new THREE.Mesh(new THREE.SphereGeometry(1,32,20),new THREE.ShaderMaterial({
+  side:THREE.BackSide,depthTest:false,depthWrite:false,
+  vertexShader:`
+   varying vec3 skyRay;
+   void main(){
+    skyRay=position;
+    vec4 clip=projectionMatrix*viewMatrix*vec4(position,0.);
+    gl_Position=clip.xyww;
+   }
+  `,
+  fragmentShader:`
+   varying vec3 skyRay;
+   float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+   float noise(vec2 p){
+    vec2 i=floor(p),f=fract(p);
+    f=f*f*(3.-2.*f);
+    return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);
+   }
+   void main(){
+    vec3 direction=normalize(skyRay);
+    float height=direction.y;
+    vec3 color=mix(vec3(.84,.90,.96),vec3(.38,.64,.86),smoothstep(-.08,.77,height));
+    float elevation=sqrt(height*height+.024);
+    vec2 uv=direction.xz/elevation*1.6;
+    float n=noise(uv)*.55+noise(uv*2.)*.26+noise(uv*4.)*.13+noise(uv*8.)*.06;
+    float clouds=smoothstep(.43,.72,n)*smoothstep(.015,.29,height);
+    color=mix(color,vec3(1.,.97,.89),clouds*.85);
+    float sunlight=pow(max(0.,dot(direction,normalize(vec3(-.43,.47,-.77)))),90.);
+    color+=vec3(.34,.24,.12)*sunlight;
+    // Offset rounding slightly across pixels to keep the gradient smooth on phones.
+    color+=(fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))))-.5)/255.;
+    gl_FragColor=vec4(color,1.);
+   }
+  `
+ }));
+ sky.frustumCulled=false;
+ sky.renderOrder=-1000;
+ scene.add(sky);
  // All botanical forms below are volumetric meshes, without image cutouts.
  const botanicalMat=c=>new THREE.MeshStandardMaterial({color:c,side:THREE.DoubleSide,roughness:.72});
  const flowerMats=['#d72e59','#fff8e7','#ef80b3','#9c86dd'].map(botanicalMat),leafMat=botanicalMat('#477e39'),blossomMat=botanicalMat('#f8c0d2'),fernMat=botanicalMat('#3c7136'),grassMat=botanicalMat('#638e3c');
@@ -247,6 +285,7 @@ export function createBotanicalGarden(THREE,camera,onGardenChime){
   item(petal?petalGeometry:leafGeometry,petal?blossomMat:leafMat,x,y,z,.12,.19,.13,-Math.PI/2,0,rnd()*6.28);
  }
  batches.forEach(({geo,m,items,bloom,pocketed})=>{const inst=new THREE.InstancedMesh(geo,m,items.length);if(bloom){paint(inst,items,10);if(items[0].mode!=='openPetal'){inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);(pocketed?pocketBatches:growing).push({inst,items});}}else items.forEach((o,i)=>{dummy.position.set(o.x,o.y,o.z);dummy.rotation.set(o.rx,o.ry,o.rz);dummy.scale.set(o.sx,o.sy,o.sz);dummy.updateMatrix();inst.setMatrixAt(i,dummy.matrix);});inst.computeBoundingSphere();if(pocketed)inst.boundingSphere.radius+=1.5;inst.castShadow=inst.receiveShadow=true;scene.add(inst);});
+ batches.clear();
  function advanceBloomPockets(cameraZ){
   let changed=false;
   for(const pocket of bloomPockets){
@@ -276,7 +315,7 @@ export function createBotanicalGarden(THREE,camera,onGardenChime){
 
  const butterflies=createGardenButterflies(THREE,scene,18,()=>[rand(-6,6),rand(1.1,3),rand(-70,8)]);
  const birds=[];for(let i=0;i<9;i++){const group=new THREE.Group(),wings=[];const body=new THREE.Mesh(ball,mat(i%2?'#567b9e':'#dbb260'));body.scale.set(.09,.07,.19);group.add(body);const head=new THREE.Mesh(ball,body.material);head.scale.setScalar(.065);head.position.set(0,.055,-.16);group.add(head);const beak=new THREE.Mesh(new THREE.ConeGeometry(.025,.09,8),pollenMat);beak.rotation.x=-Math.PI/2;beak.position.set(0,.045,-.245);group.add(beak);for(const side of [-1,1]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.012,6,4),seedMat);eye.position.set(side*.055,.08,-.18);group.add(eye);}const tail=new THREE.Mesh(new THREE.ConeGeometry(.08,.3,8),body.material);tail.rotation.x=Math.PI/2;tail.position.set(0,.02,.26);group.add(tail);for(const side of [-1,1]){const pivot=new THREE.Group();const wing=new THREE.Mesh(new THREE.SphereGeometry(1,12,6),body.material);wing.scale.set(.25,.022,.10);wing.position.x=side*.20;pivot.add(wing);group.add(pivot);wings.push(pivot);}scene.add(group);birds.push({group,wings});}
- const carriage=createGardenCarriage(THREE,scene,routeX,routeY);const treasures=createProjectTreasures(THREE,scene,camera,routeX,routeY,onGardenChime);let lastZ=Infinity,lastRideZ=null,leafTravel=0,nextLeafRelease=3;return {scene,dispose(){treasures.dispose();},falling,pathX,routeX,routeY,get projectOpen(){return treasures.open;},updateProjectUI(z,active,dt){camera.updateMatrixWorld(true);treasures.tick(z,active,dt);},botanicalGeometry:{leafGeometry,petalGeometry},tick(dt,time,cameraZ=8,inGarden=false){breeze.value=reduced?0:time;waterUniforms.time.value=time;bridge.tick(time);lakeside.tick(time,cameraZ);carriage.tick(dt,time,cameraZ);if(inGarden){
+ const carriage=createGardenCarriage(THREE,scene,routeX,routeY);const treasures=createProjectTreasures(THREE,scene,camera,routeX,routeY,onGardenChime);let lastZ=Infinity,lastRideZ=null,leafTravel=0,nextLeafRelease=3;return {scene,needsShadows(){return sun.shadow.needsUpdate;},dispose(){treasures.dispose();},falling,pathX,routeX,routeY,get projectOpen(){return treasures.open;},updateProjectUI(z,active,dt){camera.updateMatrixWorld(true);treasures.tick(z,active,dt);},botanicalGeometry:{leafGeometry,petalGeometry},tick(dt,time,cameraZ=8,inGarden=false){breeze.value=reduced?0:time;waterUniforms.time.value=time;bridge.tick(time);lakeside.tick(time,cameraZ);carriage.tick(dt,time,cameraZ);if(inGarden){
  const forwardTravel=Math.max(0,(lastRideZ??cameraZ)-cameraZ);
  lastRideZ=cameraZ;
  advanceBloomPockets(cameraZ);

@@ -1,3 +1,4 @@
+import {disposeScene} from './scene-resources.js';
 import * as THREE from './vendor/three.module.js';
 
 const palettes = [
@@ -146,9 +147,10 @@ export function createGardenCrossing() {
   const smooth = THREE.MathUtils.smoothstep;
 
   return {
-    show(value = 0) { visible = true; progress = value; },
+    show(value = .11) { visible = true; progress = value; },
     paint(value) { progress = value; },
     hide() { visible = false; },
+    dispose() { visible = false; disposeScene(scene); disposeScene(backdrop); },
     render(renderer) {
       if (!visible) return;
       const aspect = innerWidth / innerHeight;
@@ -162,7 +164,7 @@ export function createGardenCrossing() {
       camera.position.set(sway,0,z);
       camera.lookAt(0,0,z-15);
       for (let i = 0; i < arches.length; i++) {
-        const growth = smooth(progress,.03+i*.073,.24+i*.075);
+        const growth = smooth(progress,.025+i*.058,.18+i*.075);
         arches[i].scale.setScalar(.12+.88*growth);
         arches[i].rotation.z = (1-growth)*(.48-i*.27);
         arches[i].visible = growth > 0;
@@ -184,9 +186,8 @@ export function createGardenCrossing() {
       const autoClear = renderer.autoClear;
       renderer.autoClear = false;
       try {
-        if (progress >= .09 && progress < .95) {
-          // Ease in over the preceding scene before opening onto the garden.
-          matteMaterial.uniforms.opacity.value = smooth(progress,.09,.29);
+        if (progress < .95) {
+          matteMaterial.uniforms.opacity.value = 1;
           renderer.render(backdrop,camera);
         }
         renderer.clearDepth();

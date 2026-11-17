@@ -1,5 +1,5 @@
 import {disposeScene} from './scene-resources.js';
-import {createHomeAudio} from './home-audio.js?v=audio-preferences-1';
+import {createHomeAudio} from './home-audio.js?v=screen-buffers-1';
 import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
 import {createPineGeometry,addSnowyBoughs} from './winter-pines.js';
 import {createGardenHome} from './garden-home.js?v=sharp-tags-1';
@@ -194,12 +194,6 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
  selector.setAttribute('aria-label','Home environments');
  selector.innerHTML='<button type="button" aria-label="Previous environment">←</button><span aria-live="polite"></span><button type="button" aria-label="Next environment">→</button>';
  ui.append(selector);
- const cinemaPortal=document.createElement('a');
- cinemaPortal.className='cinematic-portal-link';
- cinemaPortal.href='cinematic-garden.html';
- cinemaPortal.textContent='Cinematic Garden ↗';
- cinemaPortal.hidden=true;
- ui.append(cinemaPortal);
  const soundButton=document.createElement('button');
  soundButton.type='button';
  soundButton.className='home-sound';
@@ -254,7 +248,6 @@ export function createSnowmanHome({renderer,reduced,onExplore,onProjects,onSkill
   const selected=worldIndex(Math.round(progress));
   if(selected===selectedWorld)return;
   selectedWorld=selected;
-  cinemaPortal.hidden=selected!==1;
   lastMove=enteredAt=performance.now();
   tx=ty=lx=ly=0;
   ui.classList.toggle('garden-home-selected',selected===1);

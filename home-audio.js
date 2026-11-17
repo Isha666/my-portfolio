@@ -26,7 +26,7 @@ export function createHomeAudio(button){
      if(!response.ok)throw new Error('Could not load Home ambience');
      return response.arrayBuffer();
     }).then(data=>context.decodeAudioData(data)).catch(error=>{
-     buffers.delete(index);
+     if(buffers.get(index)===buffer)buffers.delete(index);
      throw error;
     });
     buffers.set(index,buffer);
@@ -123,7 +123,19 @@ export function createHomeAudio(button){
   if(!reefPlaying&&treeLayer.source)stopLayers([treeLayer]);
   const now=context.currentTime;
   master.gain.setTargetAtTime(shouldPlay?.44:0,now,.08);
-  if(!shouldPlay||current?.world===world)return;
+  if(!shouldPlay){
+   if(current){
+    current.source.stop(now+.35);
+    current=null;
+   }
+   if(!enabled||!active)buffers.clear();
+   return;
+  }
+  const retained=new Set([world===projectsTrack?1:world]);
+  if(gardenPlaying)for(const track of [5,6,7])retained.add(track);
+  if(reefPlaying)for(const track of Object.values(reefCues))retained.add(track);
+  for(const track of buffers.keys())if(!retained.has(track))buffers.delete(track);
+  if(current?.world===world)return;
 
   const nextWorld=world;
   if(nextWorld===reefTrack)for(const track of Object.values(reefCues))loadTrack(track).catch(()=>{});
@@ -174,7 +186,6 @@ export function createHomeAudio(button){
      master.connect(context.destination);
     }
     await context.resume();
-    for(const track of [world,portalTrack,...Object.values(transitions)])loadTrack(track).catch(()=>{});
    }catch(error){
     enabled=false;
     button.setAttribute('aria-pressed','false');

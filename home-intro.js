@@ -78,10 +78,13 @@ if(!seen&&(!savedSection||savedSection==='home')&&typeof intro.showModal==='func
   dispatchEvent(new Event('portfolio-intro-reveal'));
   setTimeout(()=>{
    intro.close();
+   video.pause();
+   video.removeAttribute('poster');
    video.removeAttribute('src');
    video.load();
    bed.removeAttribute('src');
    bed.load();
+   intro.replaceChildren();
    document.querySelector('[data-section="home"]')?.focus({preventScroll:true});
   },reduced.matches?0:starVisible?860:240);
  }
@@ -92,9 +95,20 @@ if(!seen&&(!savedSection||savedSection==='home')&&typeof intro.showModal==='func
   else if(!revealing)frameHandle=video.requestVideoFrameCallback(watchFrame);
  }
 
+ function eyeOffset(x,y){
+  intro.style.setProperty('--eye-x',x+'px');
+  intro.style.setProperty('--eye-y',y+'px');
+ }
+ intro.addEventListener('pointermove',event=>{
+  if(started||revealing||reduced.matches||event.pointerType==='touch')return;
+  eyeOffset((event.clientX/innerWidth-.5)*39,(event.clientY/innerHeight-.5)*28);
+ });
+ intro.addEventListener('pointerleave',()=>eyeOffset(0,0));
+
  enter.onclick=async()=>{
   if(started||revealing)return;
   started=true;
+  eyeOffset(0,0);
   requestSound();
   fadeMedia(bed,260,()=>bed.pause());
   intro.classList.add('intro-playing');
@@ -112,7 +126,7 @@ if(!seen&&(!savedSection||savedSection==='home')&&typeof intro.showModal==='func
  function skipIntro(){video.pause();reveal();}
  skip.onclick=skipIntro;
  intro.addEventListener('cancel',event=>{event.preventDefault();skipIntro();});
- video.poster='assets/intro/neon-pupil.jpg';
+ video.poster='assets/intro/neon-pupil.jpg?v=2';
  video.src='assets/intro/neon-pupil.mp4?v=2';
  intro.showModal();
  playBed();
