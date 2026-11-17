@@ -1,5 +1,5 @@
 const intro=document.querySelector('#homeIntro');
-const savedSection=history.state?.portfolioView?.section;
+const savedSection=new URLSearchParams(location.search).get('section')??history.state?.portfolioView?.section;
 const seenKey='portfolio-pupil-intro';
 let seen=false;
 try{seen=sessionStorage.getItem(seenKey)==='1';}catch{}

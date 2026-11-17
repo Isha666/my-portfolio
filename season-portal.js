@@ -14,7 +14,7 @@ export function createSeasonPortal({THREE,renderer,camera,winterScene,path,about
  function importGarden(){
   return importedGarden??=Promise.all([
    import('./botanical-garden.js?v=blue-horizon-1'),
-   import('./garden-exit.js?v=on-demand-reef-1')
+   import('./garden-exit.js?v=city-lift-1')
   ]).catch(error=>{importedGarden=null;throw error;});
  }
  const rimPlants=[];

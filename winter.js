@@ -2,14 +2,15 @@ import {disposeScene} from './scene-resources.js';
 import {createRenderQuality} from './render-quality.js?v=garden-clarity-2';
 import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
 import {createPineGeometry,addSnowyBoughs} from './winter-pines.js?v=trail-lod-1';
-import {createSeasonPortal} from './season-portal.js?v=blue-horizon-1';
+import {createSeasonPortal} from './season-portal.js?v=city-lift-1';
 import * as THREE from './vendor/three.module.js';
 import {createSnowmanHome} from './snowman-home.js?v=screen-buffers-1';
 import {createGardenCrossing} from './garden-crossing.js?v=crossing-lifetime-1';
 import {playSnowSquall} from './snow-squall.js?v=2';
 import {createAboutStop} from './about-stop.js?v=igloo-memory-1';
 let aboutStop=null,seasonPortal=null,winterApproach=0;
-const restoredView=history.state?.portfolioView;
+const requestedSection=new URLSearchParams(location.search).get('section');
+const restoredView=requestedSection==='skills'?{section:'skills',world:2}:history.state?.portfolioView;
 const restoredSection=['about','projects','skills'].includes(restoredView?.section)?restoredView.section:null;
 const restoredWorld=[0,1,2].includes(restoredView?.world)?restoredView.world:0;
 history.scrollRestoration='manual';
@@ -29,7 +30,9 @@ function updateCurrentView(){
   if(button.dataset.section===section)button.setAttribute('aria-current','page');
   else button.removeAttribute('aria-current');
  }
- history.replaceState({...history.state,portfolioView:{section,world}},'');
+ const url=new URL(location.href);
+ if(requestedSection==='skills')url.searchParams.delete('section');
+ history.replaceState({...history.state,portfolioView:{section,world}},'',url);
 }
 
 const canvas=document.querySelector('#world');
