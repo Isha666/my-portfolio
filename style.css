@@ -464,4 +464,6 @@ header {background:rgb(0 0 0 / 16%);border-bottom:0;text-shadow:0 1px 4px #0d1e2
  }
 }
 
-.skills-entry-cover{position:fixed;inset:0;z-index:39;background:radial-gradient(ellipse at 50% 48%,#123b50,#050d20 76%);pointer-events:auto}
+.reef-entry-cover{position:fixed;inset:0;z-index:39;background:radial-gradient(ellipse at 50% 48%,#123b50,#050d20 76%);pointer-events:auto}
+
+.direct-reef :is(.chapter-mark,.season-stamp,footer,.progress-track){visibility:hidden}

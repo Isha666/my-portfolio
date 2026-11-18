@@ -1,5 +1,5 @@
 import {createPortalSix} from './portal-six.js?v=scene-lifetime-1';
-export function createGardenExit(THREE,garden,camera,renderer,onWhirlpool,onReefCue){
+export function createGardenExit(THREE,garden,camera,renderer,onWhirlpool,onReefCue,reefProgress){
  const lifetime=new AbortController();
  const listen=(type,handler,options)=>window.addEventListener(type,handler,{...options,signal:lifetime.signal});
  const scene=garden.scene,z=-126,cx=garden.pathX(z),root=new THREE.Group();root.position.set(cx,2.9,z);scene.add(root);const green=new THREE.MeshStandardMaterial({color:'#405c38',roughness:1});const ring=new THREE.Mesh(new THREE.TorusGeometry(2.8,.23,12,100),green);root.add(ring);const leaf=new THREE.MeshStandardMaterial({color:'#547e3f',side:THREE.DoubleSide,roughness:.9}),pink=new THREE.MeshStandardMaterial({color:'#ed9db8',side:THREE.DoubleSide,roughness:.75});const foliage=new THREE.InstancedMesh(garden.botanicalGeometry.leafGeometry,leaf,150);
@@ -32,10 +32,10 @@ export function createGardenExit(THREE,garden,camera,renderer,onWhirlpool,onReef
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const dive={value:0},startPosition=new THREE.Vector3();
  const veil=document.createElement('div');veil.className='garden-dive-wash';document.body.append(veil);
- let marine,vortex,reefRequest,reefModules,requestGeneration=0,unlockedSkills=[];
+ let marine,vortex,reefRequest,reefModules,requestGeneration=0;
  function importReef(){
   return reefModules??=Promise.all([
-   import('./marine-world.js?v=hatch-entry-1'),import('./marine-vortex.js?v=soft-particles-1')
+   import('./marine-world.js?v=hatch-entry-1'),import('./marine-vortex.js?v=direct-reef-1')
   ]).catch(error=>{reefModules=null;throw error;});
  }
  function prepare(){
@@ -46,7 +46,7 @@ export function createGardenExit(THREE,garden,camera,renderer,onWhirlpool,onReef
    .then(([{createMarineWorld},{createMarineVortex}])=>{
     if(lifetime.signal.aborted||generation!==requestGeneration)return;
     marine=createMarineWorld(THREE,camera,returnToGarden,{onReefCue});
-    marine.restoreSkills(unlockedSkills);
+    marine.restoreSkills(reefProgress.skills);
     vortex=createMarineVortex(THREE,camera,marine.scene);
     return renderer.compileAsync(marine.scene,camera).catch(()=>{});
    }).finally(()=>{if(reefRequest===request)reefRequest=null;});
@@ -55,7 +55,7 @@ export function createGardenExit(THREE,garden,camera,renderer,onWhirlpool,onReef
  }
  function releaseReef(){
   if(!marine)return;
-  unlockedSkills=marine.unlockedSkills();
+  reefProgress.skills=marine.unlockedSkills();
   marine.leave();
   marine.dispose();
   marine=vortex=null;
@@ -90,7 +90,7 @@ export function createGardenExit(THREE,garden,camera,renderer,onWhirlpool,onReef
  }
  const destination=new THREE.Vector3(),center=new THREE.Vector3(),top=new THREE.Vector3();
  return {
-  enter,prepare,
+
   dispose(){
    this.reset();
    lifetime.abort();
@@ -99,12 +99,11 @@ export function createGardenExit(THREE,garden,camera,renderer,onWhirlpool,onReef
    spell.dispose();
    ui.remove();veil.remove();
   },
-  enterThroughVortex(){if(reduced){enter();return;}lastDiveFrame=0;diving=whirling=true;document.body.classList.add('marine-diving');vortex.start();onWhirlpool?.();},
   get scene(){return active?marine.scene:whirling?vortex.scene:null},
   get active(){return active},
   get entering(){return diving},
   get busy(){return drawing||diving||whirling||!!transition},
-  reset(keepReef=false){requestGeneration++;reefRequest=null;transition?.kill();transition=null;gsap.killTweensOf(dive);gsap.killTweensOf(veil);diving=drawing=whirling=active=false;document.body.classList.remove('marine-diving');vortex?.settle(0);spell.hide();if(keepReef)marine?.leave();else{releaseReef();}ui.hidden=true;veil.style.opacity=0;camera.fov=66;camera.updateProjectionMatrix();},
+  reset(){requestGeneration++;reefRequest=null;transition?.kill();transition=null;gsap.killTweensOf(dive);gsap.killTweensOf(veil);diving=drawing=whirling=active=false;document.body.classList.remove('marine-diving');vortex?.settle(0);spell.hide();releaseReef();ui.hidden=true;veil.style.opacity=0;camera.fov=66;camera.updateProjectionMatrix();},
   tick(dt,time,distance,inGarden){
    uniforms.time.value=time;canEnter=inGarden&&!active&&!drawing&&!diving&&!transition&&distance>=102;ui.hidden=!canEnter;rim.material.opacity=.65+Math.sin(time)*.22;
    if(active){vortex.settle(time);marine.tick(dt,time);return;}

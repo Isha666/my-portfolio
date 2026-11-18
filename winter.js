@@ -2,11 +2,12 @@ import {disposeScene} from './scene-resources.js';
 import {createRenderQuality} from './render-quality.js?v=garden-clarity-2';
 import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
 import {createPineGeometry,addSnowyBoughs} from './winter-pines.js?v=trail-lod-1';
-import {createSeasonPortal} from './season-portal.js?v=hatch-entry-1';
+import {createSeasonPortal} from './season-portal.js?v=direct-reef-1';
 import * as THREE from './vendor/three.module.js';
 import {createSnowmanHome} from './snowman-home.js?v=screen-buffers-1';
 import {createGardenCrossing} from './garden-crossing.js?v=crossing-lifetime-1';
 import {playSnowSquall} from './snow-squall.js?v=2';
+import {createMarineVortex} from './marine-vortex.js?v=direct-reef-1';
 import {createAboutStop} from './about-stop.js?v=igloo-memory-1';
 let aboutStop=null,seasonPortal=null,winterApproach=0;
 const requestedSection=new URLSearchParams(location.search).get('section');
@@ -23,10 +24,10 @@ const restoringLeadership=restoredSection==='leadership';
 const initialCover=document.querySelector('#loading');
 const sectionButtons=[...document.querySelectorAll('[data-section]')];
 function updateCurrentView(){
- const section=pendingSection??(cityView?'leadership':snowmanHome.active?'home':seasonPortal.section);
+ const section=pendingSection??(cityView?'leadership':directDive?'skills':snowmanHome.active?'home':seasonPortal.section);
  const world=snowmanHome.world;
  const crossing=section==='projects'&&(pendingSection==='projects'&&!reduced||seasonPortal.crossingGarden);
- const reefReady=seasonPortal.inMarine;
+ const reefReady=directDive?.entered||seasonPortal.inMarine;
  const viewKey=section+'/'+world+'/'+crossing+'/'+reefReady;
  if(viewKey===lastViewKey)return;
  lastViewKey=viewKey;
@@ -219,8 +220,9 @@ function setZone(n){if(n===zone)return;zone=n;const c=zones[n];document.querySel
 const dialog=document.querySelector('#detail'),veil=document.querySelector('#veil');function close(){if(dialog.open)dialog.close();modal=false;veil.classList.remove('show');document.body.style.overflow='';}function open(content){document.querySelector('#detailContent').innerHTML=content;dialog.showModal();modal=true;veil.classList.add('show');document.body.style.overflow='hidden';gsap.fromTo(dialog,{opacity:0,x:25},{opacity:1,x:0,duration:.45});}function note(){close();aboutStop.enter();}document.querySelector('#explore').onclick=note;document.querySelector('#landmarkBtn').onclick=note;document.querySelector('#close').onclick=close;veil.onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();close()});
 function go(n){if(n===0){quickHome();return;}close();seasonPortal?.cancel();window.scrollTo({top:[0,.43,.87][n]*(document.documentElement.scrollHeight-innerHeight),behavior:reduced?'instant':'smooth'});}document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(+b.dataset.go));document.querySelector('#indexBtn').onclick=()=>{open('<span class="kicker">WINTER / THE FIELD GUIDE</span><h2>Take the<br>scenic route.</h2><p>Scroll to ride. Settle into the sleigh and follow two reindeer through the winter landscape.</p><button class="guide-btn" data-dest="0">01 &nbsp; Snowfall sleigh ride <span>↗</span></button><button class="guide-btn" data-dest="1">02 &nbsp; Lantern village <span>↗</span></button><button class="guide-btn" data-dest="2">03 &nbsp; Northern lights <span>↗</span></button><p class="note">Winter is the current focus. Autumn and spring are preserved in the earlier prototype.</p>');dialog.querySelectorAll('[data-dest]').forEach(b=>b.onclick=()=>go(+b.dataset.dest));};document.querySelector('#motionBtn').textContent=paused?'Resume snowfall ▷':'Pause snowfall Ⅱ';document.querySelector('#motionBtn').onclick=()=>{paused=!paused;document.querySelector('#motionBtn').textContent=paused?'Resume snowfall ▷':'Pause snowfall Ⅱ';};
 aboutStop=createAboutStop({THREE,camera,team,sled,path,onResume(value){target=current=value;lastD=2+value*192;window.scrollTo({top:value*(document.documentElement.scrollHeight-innerHeight),behavior:'instant'});}});
-let portalGeneration=0;
-seasonPortal=createSeasonPortal({THREE,renderer,camera,winterScene:scene,path,aboutStop,onGardenRide:(speed,water)=>snowmanHome.updateGardenRide(speed,water),onGardenChime:side=>snowmanHome.playGardenChime(side),onWhirlpool:()=>snowmanHome.playTransition('whirlpool'),onReefCue:(cue,side)=>snowmanHome.playReefCue(cue,side),onWinterReturn(value){
+let portalGeneration=0,directDive=null;
+const reefProgress={skills:[]};
+seasonPortal=createSeasonPortal({THREE,renderer,camera,winterScene:scene,path,aboutStop,reefProgress,onGardenRide:(speed,water)=>snowmanHome.updateGardenRide(speed,water),onGardenChime:side=>snowmanHome.playGardenChime(side),onWhirlpool:()=>snowmanHome.playTransition('whirlpool'),onReefCue:(cue,side)=>snowmanHome.playReefCue(cue,side),onWinterReturn(value){
  aboutStop.resumeFromPortal(value);
  target=current=value;lastD=2+value*192;
  window.scrollTo({top:value*(document.documentElement.scrollHeight-innerHeight),behavior:'instant'});
@@ -229,24 +231,22 @@ const portalStatus=document.createElement('p');
 portalStatus.className='portal-load-status';portalStatus.setAttribute('role','status');portalStatus.hidden=true;
 document.body.append(portalStatus);
 let gardenEntrance;
-async function openLandscape(key){
+async function openGarden({atShore=false}={}){
  cancelNavTransition();
- pendingSection=key;
+ pendingSection='projects';
  const generation=portalGeneration;
- portalStatus.textContent=key==='skills'?'Preparing the reef…':'Preparing the garden…';
- const floral=key==='projects'&&!reduced;
- if(key==='skills'){
+ portalStatus.textContent='Preparing the garden…';
+ const floral=!atShore&&!reduced;
+ portalStatus.hidden=floral;
+ let cover=Promise.resolve();
+ if(atShore){
   navShade=document.createElement('div');
-  navShade.className='skills-entry-cover';
+  navShade.className='reef-entry-cover';
   navShade.setAttribute('aria-hidden','true');
   document.body.append(navShade);
  }
- portalStatus.hidden=floral;
- let cover=Promise.resolve();
- if(key==='projects'){
-  document.body.classList.add('garden-departure');
-  aboutStop.dismissImmediately();
- }
+ document.body.classList.add('garden-departure');
+ aboutStop.dismissImmediately();
  if(floral){
   gardenEntrance??=createGardenCrossing();
   gardenEntrance.show();
@@ -257,13 +257,13 @@ async function openLandscape(key){
   });
  }
  try{
-  await Promise.all([seasonPortal.prepare(key),cover]);
+  await Promise.all([seasonPortal.prepare(),cover]);
   if(generation!==portalGeneration)return;
   target=current=0;lastD=2;
   window.scrollTo({top:0,behavior:'instant'});
   snowmanHome.setActive(false);aboutStop.dismissImmediately();
-  if(key==='skills'){
-   seasonPortal.enterMarine();
+  if(atShore){
+   seasonPortal.enterGardenAtShore();
    const shade=navShade;
    navTransition=gsap.to(shade,{opacity:0,duration:reduced?0:.32,onComplete:()=>{
     shade.remove();navShade=navTransition=null;
@@ -286,7 +286,7 @@ async function openLandscape(key){
  }
 }
 // Each implemented portfolio destination owns its arrival approach.
-const snowmanHome=createSnowmanHome({renderer,reduced,initialWorld:restoredWorld,initialActive:!restoredSection,trailMountains,onVisibility:active=>{team.visible=sled.visible=!active;},onExplore:button=>enterWinter(button),onProjects:()=>openLandscape('projects'),onSkills:()=>openLandscape('skills')});
+const snowmanHome=createSnowmanHome({renderer,reduced,initialWorld:restoredWorld,initialActive:!restoredSection,trailMountains,onVisibility:active=>{team.visible=sled.visible=!active;},onExplore:button=>enterWinter(button),onProjects:()=>openGarden(),onSkills:openSkills});
 let navTransition=null,navShade=null;
 const stopStormScroll=event=>{if(document.querySelector(".snow-squall"))event.preventDefault();};
 addEventListener("wheel",stopStormScroll,{passive:false});
@@ -296,7 +296,91 @@ function leaveCity(){
  disposeCity();cityView.remove();cityView=disposeCity=null;
  document.body.classList.remove('in-city');
 }
-function cancelNavTransition(){leaveCity();snowmanHome.stopTransition();pendingSection=null;portalGeneration++;gardenEntrance?.dispose();gardenEntrance=null;document.body.classList.remove('garden-departure');portalStatus.hidden=true;navTransition?.kill();navShade?.remove();navTransition=navShade=null;winterApproach=0;}
+function cancelNavTransition(){leaveCity();leaveDirectReef();snowmanHome.stopTransition();pendingSection=null;portalGeneration++;gardenEntrance?.dispose();gardenEntrance=null;document.body.classList.remove('garden-departure');portalStatus.hidden=true;navTransition?.kill();navShade?.remove();navTransition=navShade=null;winterApproach=0;}
+function leaveDirectReef(){
+ if(!directDive)return;
+ const dive=directDive;
+ directDive=null;
+ if(dive.reef){
+  reefProgress.skills=dive.reef.unlockedSkills();
+  dive.reef.leave();
+  dive.reef.dispose();
+ }
+ if(dive.vortex)disposeScene(dive.vortex.scene);
+ renderer.renderLists.dispose();
+ document.body.classList.remove('marine-diving','direct-reef');
+ document.body.style.overflow='';
+ camera.fov=66;camera.updateProjectionMatrix();
+}
+function openSkills(){
+ if(directDive||seasonPortal.inMarine)return;
+ cancelNavTransition();
+ close();
+ aboutStop.resetJourney();
+ seasonPortal.cancel();
+ seasonPortal.releaseGarden();
+ snowmanHome.setActive(false);
+ releaseWinterTrail();
+ target=current=0;lastD=2;
+ window.scrollTo({top:0,behavior:'instant'});
+ camera.fov=66;camera.updateProjectionMatrix();
+ const scene=new THREE.Scene();
+ scene.background=new THREE.Color('#020b29');
+ const vortex=reduced?null:createMarineVortex(THREE,camera,scene);
+ const dive={scene,vortex,reef:null,ready:false,entered:false,progress:0,updateSurface:null};
+ directDive=dive;
+ canvas.setAttribute('aria-label','A whirlpool descent into the underwater skills reef');
+ document.body.classList.add('marine-diving','direct-reef');
+ document.body.style.overflow='hidden';
+ if(vortex){
+  vortex.start();
+  snowmanHome.playTransition('whirlpool');
+ }
+ // Give the opening frame a chance to paint before building the destination.
+ requestAnimationFrame(()=>requestAnimationFrame(async()=>{
+  if(directDive!==dive)return;
+  try{
+   const {createMarineWorld}=await import('./marine-world.js?v=hatch-entry-1');
+   if(directDive!==dive)return;
+   dive.reef=createMarineWorld(THREE,camera,()=>openGarden({atShore:true}),{
+    onReefCue:(cue,side)=>snowmanHome.playReefCue(cue,side)
+   });
+   dive.reef.restoreSkills(reefProgress.skills);
+   await renderer.compileAsync(dive.reef.scene,camera).catch(()=>{});
+   if(directDive===dive)dive.ready=true;
+  }catch(error){
+   if(directDive!==dive)return;
+   leaveDirectReef();
+   snowmanHome.stopTransition();
+   portalStatus.textContent='Could not load the reef. Select Skills to retry.';
+   portalStatus.hidden=false;
+   console.error(error);
+  }
+ }));
+}
+function renderDirectReef(dt,raw){
+ const dive=directDive;
+ if(dive.vortex&&dive.progress<1)dive.progress=dive.vortex.tick(Math.min(raw,.12));
+ if(!dive.entered&&dive.ready&&(!dive.vortex||dive.progress>=1)){
+  if(dive.vortex){
+   dive.updateSurface=dive.vortex.transferSurface(dive.reef.scene);
+   disposeScene(dive.scene);
+   dive.vortex=null;
+   renderer.renderLists.dispose();
+  }
+  dive.reef.enter(!reduced);
+  dive.entered=true;
+  document.body.classList.remove('marine-diving');
+ }
+ if(dive.entered){
+  dive.updateSurface?.(time);
+  dive.reef.tick(dt,time);
+  renderer.render(dive.reef.scene,camera);
+ }else{
+  renderer.render(dive.scene,camera);
+ }
+ updateCurrentView();
+}
 function enterWinter(button){
  if(navTransition)return;
  cancelNavTransition();
@@ -355,7 +439,7 @@ async function openLeadership({hatchTraversed=false}={}){
  }
 }
 addEventListener('portfolio:enter-city',()=>openLeadership({hatchTraversed:true}));
-const portfolioDestinations={home:{available:true,arrive:quickHome},about:{available:true,arrive:enterWinter},projects:{available:true,arrive:()=>openLandscape('projects')},skills:{available:true,arrive:()=>openLandscape('skills')},leadership:{available:true,arrive:()=>openLeadership()},contact:{available:false}};
+const portfolioDestinations={home:{available:true,arrive:quickHome},about:{available:true,arrive:enterWinter},projects:{available:true,arrive:()=>openGarden()},skills:{available:true,arrive:openSkills},leadership:{available:true,arrive:()=>openLeadership()},contact:{available:false}};
 document.querySelectorAll('[data-section]').forEach(button=>{button.onclick=()=>{const key=button.dataset.section,destination=portfolioDestinations[key];if(!destination?.available)return;if(key==='home'){quickHome();return;}if(key==='projects'||key==='skills'||key==='leadership'){destination.arrive();return;}if(!navTransition)destination.arrive(button);};});
 document.querySelector('header .brand').onclick=e=>{e.preventDefault();quickHome();};
  let rideTouch=null;
@@ -388,15 +472,15 @@ document.querySelector('header .brand').onclick=e=>{e.preventDefault();quickHome
   target=clamp(target+delta/range,0,1);
   window.scrollTo({top:target*range,behavior:'instant'});
  }
-function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden){rideTouch=null;return;}if(cityView||restoringLeadership&&pendingSection==='leadership'&&initialCover.isConnected){updateCurrentView();return;}advanceHeldRide(dt);if(!paused)time+=dt;const roomScene=aboutStop.interiorScene;
+function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden){rideTouch=null;return;}if(cityView||restoringLeadership&&pendingSection==='leadership'&&initialCover.isConnected){updateCurrentView();return;}advanceHeldRide(dt);if(!paused)time+=dt;if(directDive){renderDirectReef(dt,raw);return;}const roomScene=aboutStop.interiorScene;
  if(!snowmanHome.active&&!roomScene&&!seasonPortal.active){
   if(!aboutStop.active&&!aboutStop.complete&&current>.09)aboutStop.warm(renderer);
   if(!aboutStop.active&&aboutStop.complete&&current>=aboutStop.gate)seasonPortal.prefetch();
  }
  if(!aboutStop.active)updateRenderQuality(raw,false,seasonPortal.section==='projects'&&!seasonPortal.crossingGarden);
- if(pendingSection==='projects'&&!reduced&&gardenEntrance){
+ if(pendingSection==='projects'&&(gardenEntrance||navShade)){
   updateCurrentView();
-  gardenEntrance.render(renderer);
+  gardenEntrance?.render(renderer);
   return;
  }
  if(!pendingSection&&(snowmanHome.active||!seasonPortal.active&&!aboutStop.active&&current<.09&&target<.09))seasonPortal.releaseGarden();
