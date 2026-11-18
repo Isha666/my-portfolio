@@ -1,5 +1,5 @@
 // Bump the cache version whenever the offline bundle changes.
-const cacheName='portfolio-offline-v7';
+const cacheName='portfolio-offline-v8';
 const files=[
  './index.html',
  './city.html',
@@ -7,8 +7,6 @@ const files=[
  './city.js',
  './city-scene.js',
  './city-lift.js',
- './assets/city/waterfront.webp',
- './assets/city/leadership-tower.webp',
  './style.css',
  './about-envelope.js',
  './about-stop.js',

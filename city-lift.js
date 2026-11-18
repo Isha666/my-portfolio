@@ -1,14 +1,13 @@
 import * as T from './vendor/three.module.js';
 import {disposeScene} from './scene-resources.js';
-import {makeMarineFloorLife} from './marine-floor-life.js';
+import {createMarineWorld} from './marine-world.js?v=glass-lift-1';
 
-export function createPressureLift(){
- const ocean=new T.Scene();
- ocean.background=new T.Color('#08243b');
- ocean.fog=new T.FogExp2('#0c3950',.061);
- ocean.add(new T.HemisphereLight('#65cbea','#184452',2.0));
- const spotlight=new T.DirectionalLight('#a2f7fd',2.4);
- spotlight.position.set(-3,16,-18);ocean.add(spotlight);
+export function createPressureLift(camera){
+ const reef=createMarineWorld(T,camera,null,{preview:true});
+ const ocean=reef.scene,reefDatum=25;
+ ocean.fog.density=.018;
+ const fill=new T.HemisphereLight('#71c9f9','#203456',.65);
+ ocean.add(fill);
  const cabin=new T.Group();
  const steel=new T.MeshStandardMaterial({color:'#243c53',metalness:.63,roughness:.38,emissive:'#142338',emissiveIntensity:.46});
  const rim=new T.MeshStandardMaterial({color:'#6e99aa',metalness:.54,roughness:.33,emissive:'#2c4153',emissiveIntensity:.3});
@@ -50,7 +49,7 @@ export function createPressureLift(){
     float line=exp(-abs(pane.y-waterline)*36.)*step(.001,waterline)*step(waterline,.999);
     float alpha=.04+edge*.065+streak*(.14+.19*pressure)+droplets*.13+line*.24;
     vec3 tint=mix(vec3(.24,.72,.8),vec3(.65,.84,1.),line+streak*.5);
-    gl_FragColor=vec4(tint,alpha*(1.-.87*clearing));
+    gl_FragColor=vec4(tint,alpha*(.78-.69*clearing));
    }
   `
  });
@@ -66,24 +65,10 @@ export function createPressureLift(){
  let seed=11;
  const random=()=>((seed=seed*16807%2147483647)-1)/2147483646;
  const range=(a,b)=>a+(b-a)*random();
- const rock=new T.DodecahedronGeometry(1,0);
- const stone=new T.MeshStandardMaterial({color:'#294a5b',roughness:.83});
- beam(ocean,stone,1,-25,-21,85,5,90);
- for(let i=0;i<52;i++){
-  const x=range(-40,40),z=range(-64,2);
-  if(Math.abs(x-2)<11&&z>-20)continue;
-  const mesh=new T.Mesh(rock,stone);mesh.position.set(x,-22.8,z);
-  mesh.scale.set(range(.55,5),range(.6,4.5),range(.6,4.8));mesh.rotation.y=range(0,6.28);ocean.add(mesh);
- }
- const reef=new T.Group();
- reef.position.set(0,0,-14);reef.scale.set(1.28,1,1.18);
- ocean.add(reef);
- const animateReef=makeMarineFloorLife(T,reef,()=>-22.4,random);
- const reefEye=new T.Vector3();
  // Fixed guide rails and illuminated depth marks provide a visible speed reference.
  for(const side of [-1,1]){
-  beam(ocean,steel,2+side*3.2,-11,4.0,.24,27,.24);
-  for(let y=-23;y<1;y+=1.75)beam(ocean,y%3===0?warmLight:light,2+side*3.2,y,4.0,.45,.05,.28);
+  beam(ocean,steel,2+side*3.2,reefDatum-11,4.0,.24,27,.24);
+  for(let y=-23;y<1;y+=1.75)beam(ocean,y%3===0?warmLight:light,2+side*3.2,y+reefDatum,4.0,.45,.05,.28);
  }
  const surface=new T.Mesh(new T.PlaneGeometry(180,150),new T.ShaderMaterial({
   side:T.DoubleSide,uniforms:{clock:{value:0}},
@@ -94,7 +79,7 @@ export function createPressureLift(){
    gl_FragColor=vec4(vec3(.10,.31,.42)+vec3(.26,.53,.55)*shimmer,1.);
   }`
  }));
- surface.rotation.x=-Math.PI/2;surface.position.set(0,-.7,-26);ocean.add(surface);
+ surface.rotation.x=-Math.PI/2;surface.position.set(0,reefDatum-.7,-26);ocean.add(surface);
  const bubbles=new T.BufferGeometry(),points=new Float32Array(220*3);
  const particles=Array.from({length:220},()=>[range(-11,11),range(0,29),range(-18,1),range(.35,1.7)]);
  bubbles.setAttribute('position',new T.BufferAttribute(points,3).setUsage(T.DynamicDrawUsage));
@@ -116,10 +101,10 @@ export function createPressureLift(){
    const eyeY=T.MathUtils.lerp(-22,streetPosition.y,rise);
    const shake=Math.sin(t*37)*.027*Math.sin(Math.PI*rise);
    camera.position.copy(streetPosition);
-   camera.position.y=eyeY+shake;
+   camera.position.y=eyeY+shake+(above?0:reefDatum);
    const exit=ease(t,4.15,5.15);
-   const inclination=(.20+Math.sin(rise*Math.PI)*.12)*(1-ease(t,3.3,4.45));
-   camera.lookAt(streetLook.x,eyeY+inclination+(streetLook.y-streetPosition.y)*exit,streetLook.z);
+   const inclination=T.MathUtils.lerp(-1.1,.24,ease(t,1.7,3.6))*(1-ease(t,3.9,4.45));
+   camera.lookAt(streetLook.x,camera.position.y+inclination+(streetLook.y-streetPosition.y)*exit,streetLook.z);
    cabin.scale.x=T.MathUtils.clamp(camera.aspect*.57,.33,1.25);
    cabin.position.copy(camera.position);
    cabin.position.z+=exit*5.6;
@@ -132,11 +117,11 @@ export function createPressureLift(){
    glass.uniforms.clearing.value=ease(t,3.24,4.20);
    particles.forEach(([x,y,z,speed],i)=>{
     points[i*3]=x+2+Math.sin(t+y)*.17;
-    points[i*3+1]=-26+(y+t*speed)%29;
+    points[i*3+1]=reefDatum-26+(y+t*speed)%29;
     points[i*3+2]=z;
    });
    bubbles.attributes.position.needsUpdate=true;
-   if(!above)animateReef(t,reef.worldToLocal(reefEye.copy(camera.position)));
+   if(!above)reef.tick(1/60,t);
    renderer.render(outside,camera);
   },
   dispose(){

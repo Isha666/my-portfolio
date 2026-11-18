@@ -1,4 +1,4 @@
-import {createCityScene,towerDistance,driveLength} from './city-scene.js?v=cinematic-2';
+import {createCityScene,towerDistance,driveLength} from './city-scene.js?v=neon-street-3';
 
 const canvas=document.querySelector('#cityView');
 const tower=document.querySelector('#tower');
