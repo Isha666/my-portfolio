@@ -163,6 +163,12 @@ export function createCityScene(canvas){
  }
  const slab=standard('#4b4656'),road=standard('#29273a',.30,.30),walk=standard('#565169',.5),roof=standard('#303047');
  const neon=['#ed60cf','#67e3ff','#c091ff','#ffd08a'].map(lit);
+ const lightShows=[];
+ function facadeLights(distance,offset){
+  const material=lit('#ef76d7');
+  lightShows.push({distance,material,offset});
+  return material;
+ }
  const litWindows=neon.map(()=>[]),frames=[];
  const drum=new T.CylinderGeometry(.84,1,1,24),roofCone=new T.ConeGeometry(1,1,4);
  const masonry=standard('#89685c'),bronze=standard('#8f5f4d',.45,.44),steel=standard('#46566e');
@@ -327,12 +333,13 @@ export function createCityScene(canvas){
   }
   root.add(facade);
  }
- const crowns=site(111,23);
+ const crowns=site(104,22);
+ const crownColors=facadeLights(104,.10);
  for(const z of [-6.2,6.2]){
   for(let tier=0;tier<6;tier++){
    const radius=3.6-tier*.34;
    part(crowns,fin,tier%2?pearl:cobalt,0,3.7+tier*7.4,z,radius,7.4,radius).rotation.y=Math.PI/8;
-   part(crowns,fin,neon[1],0,7.38+tier*7.4,z,radius*1.01,.11,radius*1.01).rotation.y=Math.PI/8;
+   part(crowns,fin,crownColors,0,7.38+tier*7.4,z,radius*1.01,.11,radius*1.01).rotation.y=Math.PI/8;
   }
   part(crowns,cap,pearl,0,46.1,z,1.65,3.4,1.65);
   part(crowns,box,white,0,49.0,z,.075,3.4,.075);
@@ -342,33 +349,35 @@ export function createCityScene(canvas){
  part(crowns,box,cobalt,0,26.2,0,2.48,2.02,9.8);
  part(crowns,box,neon[1],-1.25,25.48,0,.09,.16,9.85);
  part(crowns,box,neon[1],-1.25,27.16,0,.09,.14,9.85);
- const terraces=site(43,25);
+ const terraces=site(43,22.8);
+ const terraceColors=facadeLights(43,.50);
  for(const z of [-11,0,11]){
   for(let floor=0;floor<11;floor++){
    const slide=(floor/10)**2*2.4;
    part(terraces,box,cobalt,slide,floor*2.38+1.19,z,5.7,2.38,7.1);
    part(terraces,box,pearl,slide,floor*2.38+2.31,z,6.22,.15,7.42);
-   part(terraces,box,neon[1],slide-3.06,floor*2.38+2.39,z,.09,.075,7.33);
+   part(terraces,box,terraceColors,slide-3.06,floor*2.38+2.39,z,.09,.075,7.33);
    for(const k of [-2.3,0,2.3])for(const side of [-1,1]){
     part(terraces,box,neon[(floor+side)%3===0?1:3],slide+side*2.88,floor*2.38+1.18,z+k,.06,.86,1.31);
    }
   }
  }
  part(terraces,ball,pearl,1.8,27.1,0,4.7,1.35,18.5);
- part(terraces,ball,neon[1],1.8,27.97,0,4.4,.16,17.4);
+ part(terraces,ball,terraceColors,1.8,27.97,0,4.4,.16,17.4);
  const rooftopBark=standard('#51404a'),rooftopLeaf=standard('#315e51');
  for(const z of [-11,-6,-1,4,9,14]){
   part(terraces,box,rooftopBark,1,28.45,z,.12,.78,.12);
   part(terraces,ball,rooftopLeaf,1,29,z,.73,.62,.69);
  }
- const sphereHall=site(69,-21.9);
+ const sphereHall=site(69,-17.9);
+ const ringColors=facadeLights(69,.83);
  const halo=new T.TorusGeometry(5.15,1.24,14,64);
  const contour=new T.TorusGeometry(5.23,.034,5,72);
  part(sphereHall,box,cobalt,0,.62,0,12.2,1.24,8.1);
  const ring=part(sphereHall,halo,pearl,-.1,7.85,0,1.03,1.28,.89);
  ring.rotation.set(.10,Math.PI/2,-.24);
  for(const [depth,color] of [[.93,0],[-.93,1]]){
-  const trim=part(sphereHall,contour,neon[color],depth,7.85,0,1.03,1.28,.86);
+  const trim=part(sphereHall,contour,color===0?ringColors:neon[1],depth,7.85,0,1.03,1.28,.86);
   trim.rotation.copy(ring.rotation);
  }
  for(let i=0;i<28;i++){
@@ -392,8 +401,8 @@ export function createCityScene(canvas){
  for(let d=2;d<160;d+=13)for(const side of [-1,1]){
   const hero=side===1&&d===80;
   if(side===-1&&d===54)waterfrontPavilion(49);
-  else if(side!==-1||d!==67)building(side*range(14,17),-d,range(6,9),hero?30:d%3?range(7,13):range(17,28),range(7,11),hero?1:Math.floor(range(0,4)),hero,Math.round(d/13)%4);
-  if(!((side===1&&d>=28&&d<=54)||(side===-1&&d>=54&&d<=80)||(side===1&&d>=106&&d<=119)))building(side*range(26,49),-d-range(0,19),range(7,13),range(24,52),range(8,13),Math.floor(range(0,4)),Math.round(d/13+side)%4);
+  else if(!(side===-1&&d===67)&&!(side===1&&[28,41,106].includes(d)))building(side*range(14,17),-d,range(6,9),hero?30:d%3?range(7,13):range(17,28),range(7,11),hero?1:Math.floor(range(0,4)),hero,Math.round(d/13)%4);
+  if(!((side===1&&d>=28&&d<=54)||(side===-1&&d>=54&&d<=80)||(side===1&&d>=93&&d<=119)))building(side*range(26,49),-d-range(0,19),range(7,13),range(24,52),range(8,13),Math.floor(range(0,4)),Math.round(d/13+side)%4);
   const reflection=part(scene,reflectionGeo,wash[hero?1:Math.floor(range(0,4))],side*4.8,.021,-d,3.2,11,1);
   reflection.rotation.x=-Math.PI/2;
  }
@@ -401,7 +410,11 @@ export function createCityScene(canvas){
   const z=-d;
   const sign=billboard(nameIndex,side*11.8,6.1,z,5.5,2.1);
   sign.rotation.y=-side*Math.PI/2;
-  part(scene,box,neon[nameIndex],side*11.75,4.85,z,.10,.11,5.52);
+  const marquee=facadeLights(d,nameIndex*.23);
+  part(scene,box,marquee,side*11.75,4.85,z,.10,.11,5.52);
+  for(const flank of [-1,1]){
+   part(scene,box,marquee,side*11.78,4.9,z+flank*2.8,.11,5.25,.11);
+  }
   for(let i=0;i<4;i++)part(scene,box,neon[3],side*(11.7+i*.48),.21,z,.11,.03,4.6);
  }
  for(const [d,height] of [[24,10.4],[49,9.4],[82,9.9],[112,8.6]]){
@@ -548,6 +561,7 @@ export function createCityScene(canvas){
  });
  let time=0,pressureLift;
  const streetPosition=new T.Vector3(),streetLook=new T.Vector3();
+ const orbitOffset=new T.Vector3(),lookDirection=new T.Vector3();
  let lanePosition=2.25;
  function resize(){
   const w=innerWidth,h=innerHeight;
@@ -562,7 +576,7 @@ export function createCityScene(canvas){
   resize,
   drive(from,to,lane){return trafficFlow.drive(from,to,occupiedLanes(lane));},
   canChangeLane(distance,lane,previousLane){return occupiedLanes(previousLane).length===1&&trafficFlow.canChange(distance,lane);},
-  render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false){
+  render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false,freeLook=null){
   if(!reduced)time+=dt;
   const targetLane=laneOffsets[lane];
   trafficFlow.tick(dt,{distance,lanes:occupiedLanes(lane)});
@@ -570,8 +584,13 @@ export function createCityScene(canvas){
   streetPoint(hero.position,distance,lanePosition,.03);
   hero.rotation.y=-heading(distance)+(targetLane-lanePosition)*.047;
   for(const {sign,index,distance:at} of signs){
-   const driveCycle=Math.floor((distance-at+180)/8);
+   const driveCycle=Math.floor((distance-at+180)/6 + time*.45);
    sign.material=billboardMaterials[(index+driveCycle)%billboardMaterials.length];
+  }
+  for(const show of lightShows){
+   const nearby=1-T.MathUtils.smoothstep(Math.abs(distance-show.distance),5,32);
+   const hue=(show.offset+time*(.10+nearby*.12)+distance*.008)%1;
+   show.material.color.setHSL(hue,.90,.53+nearby*.13);
   }
   for(const signal of signals){
    const i=trafficFlow.phase(signal.distance);
@@ -613,6 +632,27 @@ export function createCityScene(canvas){
    const view=landmarkViews[mode];
    streetPosition.copy(view.position);streetLook.copy(view.look);
    fov=mobile?mode==='skypark'?82:72:52;
+  }
+  if(freeLook&&ascentTime===null&&approach<.002&&(freeLook.yaw||freeLook.pitch)){
+   const {yaw,pitch}=freeLook,view=landmarkViews[mode];
+   const pivot=view?view.look:hero.position;
+   lookDirection.subVectors(streetLook,streetPosition).applyAxisAngle(yAxis,yaw);
+   if(mode!=='hood'){
+    orbitOffset.subVectors(streetPosition,pivot).applyAxisAngle(yAxis,yaw);
+    if(!view&&mode==='chase'){
+     const right=orbitOffset.x*Math.cos(angle)+orbitOffset.z*Math.sin(angle);
+     if(Math.abs(right)>.001){
+      const clearance=right>0?8.8-lanePosition:8.8+lanePosition;
+      const fraction=Math.min(1,clearance/Math.abs(right));
+      orbitOffset.x*=fraction;orbitOffset.z*=fraction;
+     }
+    }
+    streetPosition.copy(pivot).add(orbitOffset);
+   }
+   const horizon=Math.hypot(lookDirection.x,lookDirection.z);
+   const elevation=T.MathUtils.clamp(Math.atan2(lookDirection.y,horizon)+pitch,-1.42,1.42);
+   lookDirection.y=horizon*Math.tan(elevation);
+   streetLook.copy(streetPosition).add(lookDirection);
   }
   if(camera.fov!==fov){camera.fov=fov;camera.updateProjectionMatrix();}
   if(ascentTime!==null){

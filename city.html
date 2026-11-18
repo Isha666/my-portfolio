@@ -4,15 +4,15 @@
  <meta charset="utf-8">
  <meta name="viewport" content="width=device-width,initial-scale=1">
  <title>City After Dark | Isha</title>
- <link rel="stylesheet" href="city.css?v=pedals-camera-2">
- <script type="module" src="city.js?v=pedals-camera-4"></script>
+ <link rel="stylesheet" href="city.css?v=free-look-2">
+ <script type="module" src="city.js?v=free-look-2"></script>
 </head>
 <body>
  <canvas id="cityView" aria-label="A glittery pastel-pink Porsche 911-style coupe on a neon waterfront boulevard"></canvas>
  <header class="city-header"><a href="./" aria-label="Portfolio home">isha <span>✦</span></a><a href="./?section=skills">Return to reef ↗</a><button id="citySound" aria-pressed="false">Sound off</button></header>
  <main>
   <section class="street-ui" aria-label="City drive">
-   <div class="city-intro"><p>Leadership &amp; Achievements</p><h1>City After Dark</h1></div>
+   <div class="city-intro"><p>Leadership &amp; Achievements</p><h1>City After Dark</h1><span class="look-hint">Drag to look around</span></div>
    <label class="camera-picker">Camera
     <select id="cityCamera">
      <option value="chase">Chase</option>
@@ -23,7 +23,23 @@
      <option value="spires">Twin spires</option>
     </select>
    </label>
-   <div class="drive"><span id="driveHint">Scroll or swipe to drive</span><div class="drive-buttons"><button id="laneLeft" aria-label="Switch to left lane">←</button><button id="reverse" aria-label="Drive backward">↓</button><button id="laneRight" aria-label="Switch to right lane">→</button></div><div class="city-pedals" role="group" aria-label="Drive pedals"><button id="brake" type="button">Brake</button><button id="accelerator" type="button">Accelerator</button></div><button id="pavilion" hidden>Look toward Waterfront Pavilion ↗</button><button id="enterTower">Enter the Leadership Tower ↗</button></div>
+   <div class="drive">
+    <div class="drive-status">
+     <span id="driveHint">Drag to look around</span>
+     <button id="pavilion" hidden>Look toward Waterfront Pavilion ↗</button>
+     <button id="enterTower">Enter the Leadership Tower ↗</button>
+    </div>
+    <div class="drive-controls" role="group" aria-label="Driving controls">
+     <button id="brake" class="city-pedal" type="button">Brake</button>
+     <div class="drive-pad" role="group" aria-label="Directional controls">
+      <button id="forward" aria-label="Drive forward">↑</button>
+      <button id="laneLeft" aria-label="Switch to left lane">←</button>
+      <button id="reverse" aria-label="Drive backward">↓</button>
+      <button id="laneRight" aria-label="Switch to right lane">→</button>
+     </div>
+     <button id="accelerator" class="city-pedal" type="button">Accelerator</button>
+    </div>
+   </div>
   </section>
   <dialog id="tower" aria-labelledby="towerTitle">
    <div class="tower-nav"><span>Leadership Tower</span><button id="leaveTower">Return to car ↗</button></div>
