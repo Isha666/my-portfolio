@@ -336,7 +336,11 @@ function openSkills(){
   vortex.start();
   snowmanHome.playTransition('whirlpool');
  }
- // Give the opening frame a chance to paint before building the destination.
+ // Paint the opening frame before building the destination.
+ if(vortex){
+  vortex.tick(0);
+  renderer.render(scene,camera);
+ }
  requestAnimationFrame(()=>requestAnimationFrame(async()=>{
   if(directDive!==dive)return;
   try{
@@ -346,11 +350,16 @@ function openSkills(){
     onReefCue:(cue,side)=>snowmanHome.playReefCue(cue,side)
    });
    dive.reef.restoreSkills(reefProgress.skills);
-   await renderer.compileAsync(dive.reef.scene,camera).catch(()=>{});
+   // Scene construction must not count as visible travel through the funnel.
+   dive.lastDiveFrame=performance.now();
+   const warmup=renderer.compileAsync(dive.reef.scene,camera).catch(()=>{});
+   dive.lastDiveFrame=performance.now();
+   await warmup;
    if(directDive===dive){
     // The original descent renders the reef behind the fading water funnel.
     if(dive.vortex)dive.reef.scene.add(...dive.scene.children);
     dive.scene=dive.reef.scene;
+    dive.lastDiveFrame=performance.now();
     dive.ready=true;
    }
   }catch(error){
@@ -363,7 +372,7 @@ function openSkills(){
   }
  }));
 }
-function renderDirectReef(dt,raw){
+function renderDirectReef(dt){
  const dive=directDive;
  if(dive.entered){
   dive.vortex?.settle(time);
@@ -384,6 +393,7 @@ function renderDirectReef(dt,raw){
    document.body.classList.remove('marine-diving');
   }
  }
+ camera.updateMatrixWorld(true);
  renderer.render(dive.scene,camera);
  updateCurrentView();
 }
@@ -478,7 +488,7 @@ document.querySelector('header .brand').onclick=e=>{e.preventDefault();quickHome
   target=clamp(target+delta/range,0,1);
   window.scrollTo({top:target*range,behavior:'instant'});
  }
-function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden){rideTouch=null;return;}if(cityView||restoringLeadership&&pendingSection==='leadership'&&initialCover.isConnected){updateCurrentView();return;}advanceHeldRide(dt);if(!paused)time+=dt;if(directDive){renderDirectReef(dt,raw);return;}const roomScene=aboutStop.interiorScene;
+function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden){rideTouch=null;return;}if(cityView||restoringLeadership&&pendingSection==='leadership'&&initialCover.isConnected){updateCurrentView();return;}advanceHeldRide(dt);if(!paused)time+=dt;if(directDive){renderDirectReef(dt);return;}const roomScene=aboutStop.interiorScene;
  if(!snowmanHome.active&&!roomScene&&!seasonPortal.active){
   if(!aboutStop.active&&!aboutStop.complete&&current>.09)aboutStop.warm(renderer);
   if(!aboutStop.active&&aboutStop.complete&&current>=aboutStop.gate)seasonPortal.prefetch();
