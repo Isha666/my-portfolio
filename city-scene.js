@@ -1,6 +1,6 @@
 import * as T from './vendor/three.module.js';
 import {disposeScene} from './scene-resources.js';
-import {createTraffic,crossings,laneOffsets} from './city-traffic.js';
+import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=light-show-1';
 import {createPressureLift} from './city-lift.js?v=reef-view-2';
 
 export const towerDistance=85;
@@ -187,6 +187,65 @@ export function createCityScene(canvas){
   signs.push({sign,index,distance:-z});
   return sign;
  }
+ const ledClock={value:0},ledDistance={value:0};
+ const signAtlas=document.createElement('canvas');
+ signAtlas.width=128;signAtlas.height=1024;
+ const signInk=signAtlas.getContext('2d');
+ for(const [i,word] of ['AFTER DARK','SKYPARK','MIDNIGHT','WATERFRONT'].entries()){
+  signInk.save();signInk.translate(64,i*256+128);signInk.rotate(-Math.PI/2);
+  signInk.textAlign='center';signInk.textBaseline='middle';signInk.font='bold 34px sans-serif';
+  signInk.fillStyle='#fff';signInk.fillText(word,0,0,222);signInk.restore();
+ }
+ const atlas=new T.CanvasTexture(signAtlas);
+ atlas.generateMipmaps=false;atlas.minFilter=T.LinearFilter;
+ const colorCycle=`
+  vec3 spectrum(float hue){return .5+.5*cos(6.283*(hue+vec3(0.,.67,.33)));}
+ `;
+ function tallSign(parent,index,x,y,z,width,height,rotation){
+  const material=new T.ShaderMaterial({
+   side:T.DoubleSide,toneMapped:false,
+   uniforms:{atlas:{value:atlas},clock:ledClock,route:ledDistance,phase:{value:index*.23}},
+   vertexShader:`varying vec2 panel;void main(){panel=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+   fragmentShader:`
+    uniform sampler2D atlas;uniform float clock,route,phase;varying vec2 panel;
+    ${colorCycle}
+    void main(){
+     float cycle=clock*.19+route*.026+phase;
+     float frame=mod(floor(clock*.50+route*.12+phase*4.),4.);
+     float ink=texture2D(atlas,vec2(panel.x,(frame+clamp(panel.y,.006,.994))*.25)).a;
+     vec3 color=spectrum(cycle+panel.y*.62);
+     float beam=pow(.5+.5*sin(panel.y*16.-clock*2.9+phase*6.),4.);
+     float border=1.-smoothstep(.008,.032,min(min(panel.x,1.-panel.x),min(panel.y,1.-panel.y)));
+     color=color*(.44+.41*beam)+vec3(.75,.77,.94)*max(ink,border*.70);
+     gl_FragColor=vec4(color,1.);
+    }
+   `
+  });
+  const sign=part(parent,signGeometry,material,x,y,z,width,height,1);sign.rotation.y=rotation;
+  return sign;
+ }
+ function towerGradient(index){
+  return new T.ShaderMaterial({
+   toneMapped:false,
+   uniforms:{clock:ledClock,route:ledDistance,phase:{value:index*.32}},
+   vertexShader:`
+    varying vec3 facade;varying vec3 faceNormal;
+    void main(){vec4 p=modelMatrix*vec4(position,1.);facade=p.xyz;faceNormal=normal;gl_Position=projectionMatrix*viewMatrix*p;}
+   `,
+   fragmentShader:`
+    uniform float clock,route,phase;varying vec3 facade;varying vec3 faceNormal;
+    ${colorCycle}
+    void main(){
+     float hue=phase+facade.y*.020+clock*.16+route*.009;
+     float sweep=pow(.5+.5*sin(facade.y*.37-clock*3.+phase*8.),5.);
+     float level=.17+.28*sweep;
+     float floorBand=pow(.5+.5*cos(facade.y*4.),18.);
+     vec3 color=spectrum(hue)*level+floorBand*spectrum(hue+.21)*.33;
+     gl_FragColor=vec4(color*(.64+.36*abs(faceNormal.x)),1.);
+    }
+   `
+  });
+ }
  const darkGlass=standard('#273b57',.21,.65);
  const white=lit('#dddbff'),amber=lit('#ffd08a'),red=lit('#ff405e');
  const reflectionGeo=new T.PlaneGeometry(1,1);
@@ -223,6 +282,10 @@ export function createCityScene(canvas){
   }
  }
  function building(x,z,w,h,depth,palette,hero=false,style=0){
+  if(hero||h>=18&&Math.floor(-z)%3===2){
+   const side=Math.sign(x);
+   tallSign(scene,palette,x-side*w*.57,h*.54,z+depth*.18,1.48,h*.78,-side*Math.PI/2);
+  }
   if(style===1||hero){
    const glass=part(scene,drum,darkGlass,x,h*.50,z,w*.49,h,depth*.51);
    glass.rotation.y=.08;
@@ -334,11 +397,11 @@ export function createCityScene(canvas){
   root.add(facade);
  }
  const crowns=site(104,22);
- const crownColors=facadeLights(104,.10);
+ const crownColors=facadeLights(104,.10),crownWash=towerGradient(0);
  for(const z of [-6.2,6.2]){
   for(let tier=0;tier<6;tier++){
    const radius=3.6-tier*.34;
-   part(crowns,fin,tier%2?pearl:cobalt,0,3.7+tier*7.4,z,radius,7.4,radius).rotation.y=Math.PI/8;
+   part(crowns,fin,z<0?crownWash:tier%2?pearl:cobalt,0,3.7+tier*7.4,z,radius,7.4,radius).rotation.y=Math.PI/8;
    part(crowns,fin,crownColors,0,7.38+tier*7.4,z,radius*1.01,.11,radius*1.01).rotation.y=Math.PI/8;
   }
   part(crowns,cap,pearl,0,46.1,z,1.65,3.4,1.65);
@@ -350,11 +413,11 @@ export function createCityScene(canvas){
  part(crowns,box,neon[1],-1.25,25.48,0,.09,.16,9.85);
  part(crowns,box,neon[1],-1.25,27.16,0,.09,.14,9.85);
  const terraces=site(43,22.8);
- const terraceColors=facadeLights(43,.50);
+ const terraceColors=facadeLights(43,.50),terraceWash=towerGradient(1);
  for(const z of [-11,0,11]){
   for(let floor=0;floor<11;floor++){
    const slide=(floor/10)**2*2.4;
-   part(terraces,box,cobalt,slide,floor*2.38+1.19,z,5.7,2.38,7.1);
+   part(terraces,box,z===0?terraceWash:cobalt,slide,floor*2.38+1.19,z,5.7,2.38,7.1);
    part(terraces,box,pearl,slide,floor*2.38+2.31,z,6.22,.15,7.42);
    part(terraces,box,terraceColors,slide-3.06,floor*2.38+2.39,z,.09,.075,7.33);
    for(const k of [-2.3,0,2.3])for(const side of [-1,1]){
@@ -362,6 +425,7 @@ export function createCityScene(canvas){
    }
   }
  }
+ tallSign(terraces,1,-3.12,14.15,0,2.30,23,-Math.PI/2);
  part(terraces,ball,pearl,1.8,27.1,0,4.7,1.35,18.5);
  part(terraces,ball,terraceColors,1.8,27.97,0,4.4,.16,17.4);
  const rooftopBark=standard('#51404a'),rooftopLeaf=standard('#315e51');
@@ -411,6 +475,7 @@ export function createCityScene(canvas){
   const sign=billboard(nameIndex,side*11.8,6.1,z,5.5,2.1);
   sign.rotation.y=-side*Math.PI/2;
   const marquee=facadeLights(d,nameIndex*.23);
+  if(d===49)tallSign(scene,nameIndex,side*10.15,4.9,z-3,1.40,7.8,-side*Math.PI/2);
   part(scene,box,marquee,side*11.75,4.85,z,.10,.11,5.52);
   for(const flank of [-1,1]){
    part(scene,box,marquee,side*11.78,4.9,z+flank*2.8,.11,5.25,.11);
@@ -510,6 +575,29 @@ export function createCityScene(canvas){
   const group=new T.Group();streetPoint(group.position,d,-10,4);group.rotation.y=-heading(d);scene.add(group);
   for(let i=0;i<3;i++){const beam=part(group,box,neon[i],0,i*.35,0,.045,.055,3.2);party.push(beam);}
  }
+ const lampPlane=new T.PlaneGeometry(1,1);
+ const roadBeams=[true,false].map(single=>new T.ShaderMaterial({
+  transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,
+  uniforms:{single:{value:single?1:0}},
+  vertexShader:`varying vec2 beam;void main(){beam=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`
+   uniform float single;varying vec2 beam;
+   void main(){
+    float distance=beam.y,x=beam.x-.5;
+    float width=mix(.033,.24,distance);
+    float spread=mix(.14,.24,distance)*(1.-single);
+    float a=exp(-pow((x-spread)/width,2.));
+    float b=exp(-pow((x+spread)/width,2.))*(1.-single);
+    float falloff=smoothstep(0.,.10,distance)*pow(1.-distance,1.42);
+    float road=.79+.21*sin(distance*154.+sin(x*49.)*2.);
+    gl_FragColor=vec4(.79,.88,1.,min(1.,a+b)*falloff*road*.63);
+   }
+  `
+ }));
+ function addRoadBeam(model,single=false){
+  const beam=part(model,lampPlane,roadBeams[single?0:1],0,.024,single?-4.2:-5.4,single?3.8:5.4,7.1,1);
+  beam.rotation.x=-Math.PI/2;
+ }
  const rubber=standard('#131319'),rim=standard('#6e6476',.35,.7);
  function car(color,variant){
   const group=new T.Group(),paint=standard(color,.27,.66);
@@ -528,7 +616,7 @@ export function createCityScene(canvas){
   }
   if(variant===1){part(group,box,paint,0,.97,.45,1.76,.75,2.58);part(group,box,darkGlass,0,1.04,1.75,1.35,.44,.06);}
   if(variant===2){group.scale.set(.91,.81,.82);part(group,box,paint,0,.94,1.63,1.48,.061,.23);}
-  scene.add(group);return group;
+  addRoadBeam(group);scene.add(group);return group;
  }
  function bike(color){
   const model=new T.Group(),paint=standard(color,.31,.33);
@@ -542,9 +630,9 @@ export function createCityScene(canvas){
   part(model,box,red,0,.67,.68,.17,.072,.06);
   const rider=part(model,ball,roof,0,.96,.13,.205,.31,.14);rider.rotation.x=.48;
   part(model,ball,paint,0,1.24,-.05,.14,.15,.14);
-  scene.add(model);return model;
+  addRoadBeam(model,true);scene.add(model);return model;
  }
- const hero=makeCoupe();scene.add(hero);
+ const hero=makeCoupe();addRoadBeam(hero);scene.add(hero);
  const colors=['#6253a1','#c27062','#355b74','#5da36b','#e1bf74','#92648a'];
  const trafficFlow=createTraffic(24);
  const traffic=trafficFlow.cars.map((carState,i)=>{
@@ -578,6 +666,7 @@ export function createCityScene(canvas){
   canChangeLane(distance,lane,previousLane){return occupiedLanes(previousLane).length===1&&trafficFlow.canChange(distance,lane);},
   render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false,freeLook=null){
   if(!reduced)time+=dt;
+  ledClock.value=time;ledDistance.value=distance;
   const targetLane=laneOffsets[lane];
   trafficFlow.tick(dt,{distance,lanes:occupiedLanes(lane)});
   lanePosition=reduced?targetLane:T.MathUtils.damp(lanePosition,targetLane,7,dt);

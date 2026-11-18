@@ -13,7 +13,7 @@ export function createTraffic(count){
   const slot=Math.floor(index/4),perLane=Math.ceil(count/4);
   const distance=12+slot*(end-28)/perLane+lane*4+Number(side<0)*7;
   return {distance,side,lane,speed:4.1+index%5*.45};
- });
+ }).filter((car,index)=>car.side!==1||car.lane!==1||Math.floor(index/4)%3===2);
  let time=0;
  function limit(from,to,direction,side,lanes,others,checkSignals){
   let available=Math.max(0,(to-from)*direction);

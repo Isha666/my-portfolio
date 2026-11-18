@@ -1,4 +1,4 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=free-look-1';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=light-show-1';
 
 const canvas=document.querySelector('#cityView');
 const tower=document.querySelector('#tower');
