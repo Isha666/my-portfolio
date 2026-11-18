@@ -4,12 +4,23 @@
  <meta charset="utf-8">
  <meta name="viewport" content="width=device-width,initial-scale=1">
  <title>City After Dark | Isha</title>
- <link rel="stylesheet" href="city.css?v=free-look-2">
+ <link rel="stylesheet" href="city.css?v=portfolio-nav-1">
  <script type="module" src="city.js?v=light-show-1"></script>
 </head>
 <body>
  <canvas id="cityView" aria-label="A glittery pastel-pink Porsche 911-style coupe on a neon waterfront boulevard"></canvas>
- <header class="city-header"><a href="./" aria-label="Portfolio home">isha <span>✦</span></a><a href="./?section=skills">Return to reef ↗</a><button id="citySound" aria-pressed="false">Sound off</button></header>
+ <header class="city-header">
+  <a class="city-brand" href="./?section=home" aria-label="Portfolio home">isha <span aria-hidden="true">✦</span></a>
+  <nav class="city-nav" aria-label="Portfolio sections">
+   <a href="./?section=home">Home</a>
+   <a href="./?section=about">About</a>
+   <a href="./?section=projects">Projects</a>
+   <a href="./?section=skills">Skills</a>
+   <a href="./city.html?from=reef" aria-current="page">Leadership and Achievements</a>
+   <span class="city-nav-soon">Contact <small>soon</small></span>
+  </nav>
+  <button id="citySound" aria-pressed="false">Sound off</button>
+ </header>
  <main>
   <section class="street-ui" aria-label="City drive">
    <div class="city-intro"><p>Leadership &amp; Achievements</p><h1>City After Dark</h1><span class="look-hint">Drag to look around</span></div>

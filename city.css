@@ -9,8 +9,8 @@ button:disabled{cursor:default;opacity:.55}
 #cityView{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .city-header{position:fixed;inset:0 0 auto;z-index:2;display:flex;align-items:center;gap:clamp(10px,3vw,30px);padding:16px clamp(14px,5vw,62px);background:#101322ae;backdrop-filter:blur(12px);border-bottom:1px solid #d4c4fc27}
 .city-header a{text-decoration:none;font-size:.86rem}
-.city-header a:first-child{margin-right:auto;font-weight:750;font-size:1.45rem;letter-spacing:-.07em}
-.city-header a span{color:#ffd098;margin-left:3px}
+.city-header .city-brand{font-weight:750;font-size:1.45rem;letter-spacing:-.07em}
+.city-brand span{color:#ffd098;margin-left:3px}
 .city-header button,.drive button,.tower-nav button,#replayFloor{border:1px solid #d4c4fc57;background:#1a1c33;border-radius:999px;padding:.65rem .95rem}
 .street-ui{pointer-events:none;position:fixed;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(82px,13vh,126px) clamp(14px,5vw,62px) max(20px,env(safe-area-inset-bottom))}
 .city-intro{background:linear-gradient(90deg,#151326bb,#15132600);align-self:flex-start;padding:12px 36px 14px 13px}
@@ -94,3 +94,23 @@ h1{margin:.13em 0 0;font-size:clamp(2rem,5vw,4.8rem);letter-spacing:-.055em;text
 @media(max-height:535px){.drive-pad{grid-template-columns:repeat(3,31px);grid-template-rows:repeat(3,30px)}.drive .city-pedal{height:59px}.camera-picker{top:62px;bottom:auto}.city-intro{padding-top:28px}}
 
 .look-hint{display:inline-block;margin-top:8px;color:#f0deff;font-size:.76rem;text-shadow:0 1px 12px #141024}
+
+.city-header{justify-content:space-between}
+.city-nav{display:flex;align-items:center;justify-content:center;gap:clamp(12px,2.2vw,30px);text-align:center}
+.city-nav a,.city-nav-soon{padding:8px 0;border-bottom:1px solid transparent;line-height:1.15}
+.city-nav a:hover,.city-nav a[aria-current="page"]{color:#ffd098;border-bottom-color:currentColor}
+.city-nav-soon{opacity:.55;font-size:.86rem}
+.city-nav-soon small{display:block;font-size:.62em}
+@media(max-width:700px){
+ .city-header{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding-block:8px}
+ .city-nav{grid-area:2/1/3/3;justify-content:space-between;gap:6px}
+ .city-nav a,.city-nav-soon{font-size:.70rem}
+ .city-nav a[aria-current="page"]{max-width:96px}
+ #citySound{font-size:.76rem;padding:.45rem .7rem}
+ .street-ui{padding-top:112px}
+ .camera-picker{top:194px}
+}
+@media(max-width:700px) and (max-height:535px){
+ .city-intro{padding-top:8px}
+ .camera-picker{top:111px}
+}

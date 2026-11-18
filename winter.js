@@ -10,7 +10,10 @@ import {playSnowSquall} from './snow-squall.js?v=2';
 import {createAboutStop} from './about-stop.js?v=igloo-memory-1';
 let aboutStop=null,seasonPortal=null,winterApproach=0;
 const requestedSection=new URLSearchParams(location.search).get('section');
-const restoredView=requestedSection==='skills'?{section:'skills',world:2}:history.state?.portfolioView;
+const sectionWorlds={home:0,about:0,projects:1,skills:2};
+const restoredView=Object.hasOwn(sectionWorlds,requestedSection)
+ ? {section:requestedSection,world:requestedSection==='home'?(history.state?.portfolioView?.world??0):sectionWorlds[requestedSection]}
+ : history.state?.portfolioView;
 const restoredSection=['about','projects','skills'].includes(restoredView?.section)?restoredView.section:null;
 const restoredWorld=[0,1,2].includes(restoredView?.world)?restoredView.world:0;
 history.scrollRestoration='manual';
