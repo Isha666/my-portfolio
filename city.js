@@ -1,6 +1,8 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=portfolio-scene-1';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=hatch-entry-1';
 
-export function mountCity(root){
+import {hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
+
+export function mountCity(root,{hatchTraversed=false}={}){
  const lifetime=new AbortController();
  const listen=(type,handler,options)=>window.addEventListener(type,handler,{...options,signal:lifetime.signal});
  const canvas=root.querySelector('#cityView');
@@ -30,7 +32,7 @@ export function mountCity(root){
   delete brake.dataset.held;delete accelerator.dataset.held;delete forward.dataset.held;
   drag=null;canvas.classList.remove('is-looking');
  }
- let arriving=!reduced&&!!city,ascentTime=0;
+ let arriving=!reduced&&!!city,ascentTime=hatchTraversed?hatchApproachDuration:0;
  if(arriving)root.classList.add('city-arriving');
  function drive(delta){
   if(arriving||tower.open||enterStart!==null||braking())return false;

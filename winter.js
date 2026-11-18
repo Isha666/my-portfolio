@@ -2,7 +2,7 @@ import {disposeScene} from './scene-resources.js';
 import {createRenderQuality} from './render-quality.js?v=garden-clarity-2';
 import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
 import {createPineGeometry,addSnowyBoughs} from './winter-pines.js?v=trail-lod-1';
-import {createSeasonPortal} from './season-portal.js?v=portfolio-scene-1';
+import {createSeasonPortal} from './season-portal.js?v=hatch-entry-1';
 import * as THREE from './vendor/three.module.js';
 import {createSnowmanHome} from './snowman-home.js?v=screen-buffers-1';
 import {createGardenCrossing} from './garden-crossing.js?v=crossing-lifetime-1';
@@ -233,6 +233,12 @@ async function openLandscape(key){
  const generation=portalGeneration;
  portalStatus.textContent=key==='skills'?'Preparing the reef…':'Preparing the garden…';
  const floral=key==='projects'&&!reduced;
+ if(key==='skills'){
+  navShade=document.createElement('div');
+  navShade.className='skills-entry-cover';
+  navShade.setAttribute('aria-hidden','true');
+  document.body.append(navShade);
+ }
  portalStatus.hidden=floral;
  let cover=Promise.resolve();
  if(key==='projects'){
@@ -254,16 +260,24 @@ async function openLandscape(key){
   target=current=0;lastD=2;
   window.scrollTo({top:0,behavior:'instant'});
   snowmanHome.setActive(false);aboutStop.dismissImmediately();
-  if(key==='skills')seasonPortal.enterMarine();else seasonPortal.enterGarden(floral?gardenEntrance:null);
+  if(key==='skills'){
+   seasonPortal.enterMarine();
+   const shade=navShade;
+   navTransition=gsap.to(shade,{opacity:0,duration:reduced?0:.32,onComplete:()=>{
+    shade.remove();navShade=navTransition=null;
+   }});
+  }else{
+   seasonPortal.enterGarden(floral?gardenEntrance:null);
+   navTransition=null;
+  }
   gardenEntrance=null;
   pendingSection=null;
-  navTransition=null;
   document.body.classList.remove('garden-departure');
   portalStatus.hidden=true;
  }catch(error){
   if(generation!==portalGeneration)return;
   pendingSection=null;
-  navTransition?.kill();navTransition=null;gardenEntrance?.dispose();gardenEntrance=null;
+  navTransition?.kill();navShade?.remove();navShade=navTransition=null;gardenEntrance?.dispose();gardenEntrance=null;
   document.body.classList.remove('garden-departure');portalStatus.hidden=false;
   portalStatus.textContent='Could not load this landscape. Select it again to retry.';
   console.error(error);
@@ -300,7 +314,7 @@ function enterWinter(button){
  navTransition=playSnowSquall(gsap,origin,arrive,distance=>{winterApproach=distance;},()=>{winterApproach=0;navTransition=null;});
 }
 function quickHome(){cancelNavTransition();navShade=document.createElement('div');navShade.className='quick-nav-shade';document.body.append(navShade);const shade=navShade;navTransition=gsap.timeline({onComplete:()=>{shade.remove();navTransition=navShade=null;}}).to(shade,{opacity:1,duration:reduced?0:.28,ease:'power1.inOut'}).call(()=>{close();aboutStop.resetJourney();seasonPortal?.cancel();target=current=0;lastD=2;snowmanHome.setActive(true);window.scrollTo({top:0,behavior:'instant'});document.querySelector('[data-section="home"]').focus({preventScroll:true});}).to(shade,{opacity:0,duration:reduced?0:.72,ease:'power2.out'});}
-async function openLeadership(){
+async function openLeadership({hatchTraversed=false}={}){
  if(cityView||pendingSection==='leadership')return;
  cancelNavTransition();
  pendingSection='leadership';
@@ -308,7 +322,7 @@ async function openLeadership(){
  portalStatus.textContent='Preparing the water elevator…';
  portalStatus.hidden=false;
  try{
-  const {mountCity}=await import('./city.js?v=portfolio-scene-1');
+  const {mountCity}=await import('./city.js?v=hatch-entry-1');
   if(generation!==portalGeneration)return;
   close();
   aboutStop.resetJourney();
@@ -321,7 +335,7 @@ async function openLeadership(){
   const root=document.querySelector('#cityTemplate').content.firstElementChild.cloneNode(true);
   document.body.append(root);
   try{
-   disposeCity=mountCity(root);
+   disposeCity=mountCity(root,{hatchTraversed});
   }catch(error){
    root.remove();
    throw error;
@@ -338,8 +352,8 @@ async function openLeadership(){
   console.error(error);
  }
 }
-addEventListener('portfolio:enter-city',openLeadership);
-const portfolioDestinations={home:{available:true,arrive:quickHome},about:{available:true,arrive:enterWinter},projects:{available:true,arrive:()=>openLandscape('projects')},skills:{available:true,arrive:()=>openLandscape('skills')},leadership:{available:true,arrive:openLeadership},contact:{available:false}};
+addEventListener('portfolio:enter-city',()=>openLeadership({hatchTraversed:true}));
+const portfolioDestinations={home:{available:true,arrive:quickHome},about:{available:true,arrive:enterWinter},projects:{available:true,arrive:()=>openLandscape('projects')},skills:{available:true,arrive:()=>openLandscape('skills')},leadership:{available:true,arrive:()=>openLeadership()},contact:{available:false}};
 document.querySelectorAll('[data-section]').forEach(button=>{button.onclick=()=>{const key=button.dataset.section,destination=portfolioDestinations[key];if(!destination?.available)return;if(key==='home'){quickHome();return;}if(key==='projects'||key==='skills'||key==='leadership'){destination.arrive();return;}if(!navTransition)destination.arrive(button);};});
 document.querySelector('header .brand').onclick=e=>{e.preventDefault();quickHome();};
  let rideTouch=null;

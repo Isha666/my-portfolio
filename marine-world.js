@@ -7,6 +7,39 @@ import {marineCreatures} from './marine-creatures.js?v=reef-release-1';
 
 import {reefSkills as skills,peopleSkills,treeSkills as branchSkills} from './marine-skills.js';
 
+export function createReefHatch(T,{closedShaft=true}={}){
+ const hatch=new T.Group();
+ const hatchSteel=new T.MeshStandardMaterial({color:'#314555',metalness:.55,roughness:.45});
+ const hatchGlow=new T.MeshBasicMaterial({color:'#7af0ff',toneMapped:false});
+ const collar=new T.Mesh(new T.CylinderGeometry(2.72,3.12,2.9,48,1,true),new T.MeshStandardMaterial({color:'#384954',metalness:.48,roughness:.65,side:T.DoubleSide}));
+ collar.rotation.x=Math.PI/2;collar.position.z=-1.39;hatch.add(collar);
+ const ring=(radius,tube,material,z)=>{
+  const part=new T.Mesh(new T.TorusGeometry(radius,tube,12,64),material);part.position.z=z;hatch.add(part);
+ };
+ ring(2.53,.24,hatchSteel,.03);ring(2.27,.04,hatchGlow,.14);ring(2.77,.05,hatchGlow,-1.35);ring(2.85,.16,hatchSteel,-2.38);
+ const bolt=new T.CylinderGeometry(.105,.105,.12,8);
+ for(let i=0;i<18;i++){
+  const angle=i/18*Math.PI*2;
+  const mesh=new T.Mesh(bolt,hatchSteel);mesh.rotation.x=Math.PI/2;mesh.position.set(Math.cos(angle)*2.64,Math.sin(angle)*2.64,.245);hatch.add(mesh);
+ }
+ const hatchDoors=new T.Group();hatch.add(hatchDoors);
+ const hatchLeaves=[];
+ for(const side of [-1,1]){
+  const panel=new T.Group();
+  const door=new T.Mesh(new T.CircleGeometry(2.24,48,side===1?-Math.PI/2:Math.PI/2,Math.PI),hatchSteel);
+  panel.add(door);hatchLeaves.push(panel);hatchDoors.add(panel);
+  for(const y of [-.95,0,.95]){
+   const rib=new T.Mesh(new T.BoxGeometry(1.63,.095,.1),hatchSteel);
+   rib.position.set(side*.86,y,.05);panel.add(rib);
+  }
+  const latch=new T.Mesh(new T.BoxGeometry(.14,.65,.15),hatchGlow);
+  latch.position.set(side*.18,0,.09);panel.add(latch);
+ }
+ const shaft=new T.Mesh(new T.CircleGeometry(2.64,48),new T.MeshBasicMaterial({color:'#051320',side:T.DoubleSide}));
+ shaft.position.z=-2.85;shaft.visible=closedShaft;hatch.add(shaft);
+ return {hatch,hatchLeaves};
+}
+
 export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}){
  const lifetime=new AbortController();
  const listen=(type,handler,options)=>window.addEventListener(type,handler,{...options,signal:lifetime.signal});
@@ -69,36 +102,8 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
  const hud=document.createElement('section');hud.id='marineHud';hud.hidden=true;hud.setAttribute('aria-label','Underwater skills');hud.innerHTML=`<div class="marine-top"><span>03 / UNDERWATER</span><button data-map aria-label="Reef map" aria-controls="reef-map" aria-expanded="false"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15m6-12v15"/></svg> <span class="reef-map-label">Map</span></button><button data-all>View all skills</button><button data-zoom="in" aria-label="Zoom in">+</button><button data-zoom="out" aria-label="Zoom out">−</button><button data-return>Return to garden</button><button data-city>City lift ↗</button></div><div class="marine-intro"><small>THE LIVING REEF</small><h1>A deeper<br><em>curiosity.</em></h1><p>Drag to look in any direction<br>Scroll, arrows, WASD or the stick to swim · Ctrl + scroll to zoom</p></div><div class="marine-markers"></div><div class="marine-map" id="reef-map" hidden></div><aside class="marine-card" hidden aria-label="Skill encounter"></aside><div class="marine-touch"><button class="marine-stick" aria-label="Drag to swim"><i></i></button><span>SWIM<br>↑ ↓ ← →</span></div>`;
  document.body.append(hud);
  const stick=hud.querySelector('.marine-stick'),thumb=stick.querySelector('i'),axisInput=new T.Vector2();let stickPointer=null;
- const hatch=new T.Group();
+ const {hatch,hatchLeaves}=createReefHatch(T);
  hatch.position.set(11,8.7,-18);hatch.rotation.x=Math.PI/5;scene.add(hatch);
- const hatchSteel=new T.MeshStandardMaterial({color:'#314555',metalness:.55,roughness:.45});
- const hatchGlow=new T.MeshBasicMaterial({color:'#7af0ff',toneMapped:false});
- const collar=new T.Mesh(new T.CylinderGeometry(2.72,3.12,2.9,48,1,true),new T.MeshStandardMaterial({color:'#384954',metalness:.48,roughness:.65,side:T.DoubleSide}));
- collar.rotation.x=Math.PI/2;collar.position.z=-1.39;hatch.add(collar);
- const ring=(radius,tube,material,z)=>{
-  const part=new T.Mesh(new T.TorusGeometry(radius,tube,12,64),material);part.position.z=z;hatch.add(part);
- };
- ring(2.53,.24,hatchSteel,.03);ring(2.27,.04,hatchGlow,.14);ring(2.77,.05,hatchGlow,-1.35);ring(2.85,.16,hatchSteel,-2.38);
- const bolt=new T.CylinderGeometry(.105,.105,.12,8);
- for(let i=0;i<18;i++){
-  const angle=i/18*Math.PI*2;
-  const mesh=new T.Mesh(bolt,hatchSteel);mesh.rotation.x=Math.PI/2;mesh.position.set(Math.cos(angle)*2.64,Math.sin(angle)*2.64,.245);hatch.add(mesh);
- }
- const hatchDoors=new T.Group();hatch.add(hatchDoors);
- const hatchLeaves=[];
- for(const side of [-1,1]){
-  const panel=new T.Group();
-  const door=new T.Mesh(new T.CircleGeometry(2.24,48,side===1?-Math.PI/2:Math.PI/2,Math.PI),hatchSteel);
-  panel.add(door);hatchLeaves.push(panel);hatchDoors.add(panel);
-  for(const y of [-.95,0,.95]){
-   const rib=new T.Mesh(new T.BoxGeometry(1.63,.095,.1),hatchSteel);
-   rib.position.set(side*.86,y,.05);panel.add(rib);
-  }
-  const latch=new T.Mesh(new T.BoxGeometry(.14,.65,.15),hatchGlow);
-  latch.position.set(side*.18,0,.09);panel.add(latch);
- }
- const shaft=new T.Mesh(new T.CircleGeometry(2.64,48),new T.MeshBasicMaterial({color:'#051320',side:T.DoubleSide}));
- shaft.position.z=-2.85;hatch.add(shaft);
  const cityButton=hud.querySelector('[data-city]');
  const hatchAction=document.createElement('button');
  hatchAction.className='marine-anchor-control';hatchAction.textContent='Take the city lift ↗';hatchAction.hidden=true;hud.append(hatchAction);

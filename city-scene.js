@@ -1,7 +1,7 @@
 import * as T from './vendor/three.module.js';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=light-show-1';
-import {createPressureLift} from './city-lift.js?v=portfolio-scene-1';
+import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
 export const towerDistance=85;
 export const driveLength=107;
@@ -747,7 +747,7 @@ export function createCityScene(canvas){
   if(ascentTime!==null){
    pressureLift??=createPressureLift(camera);
    if(ascentTime<pressureLift.duration){
-    hero.visible=ascentTime>=3.67;
+    hero.visible=ascentTime>=hatchApproachDuration+3.67;
     pressureLift.render(renderer,scene,camera,ascentTime,streetPosition,streetLook);
     return false;
    }

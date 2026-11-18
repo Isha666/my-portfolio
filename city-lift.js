@@ -1,6 +1,8 @@
 import * as T from './vendor/three.module.js';
 import {disposeScene} from './scene-resources.js';
-import {createMarineWorld} from './marine-world.js?v=portfolio-scene-1';
+import {createMarineWorld,createReefHatch} from './marine-world.js?v=hatch-entry-1';
+
+export const hatchApproachDuration=2.15;
 
 export function createPressureLift(camera){
  const reef=createMarineWorld(T,camera,null,{preview:true});
@@ -9,6 +11,8 @@ export function createPressureLift(camera){
  const fill=new T.HemisphereLight('#71c9f9','#203456',.65);
  ocean.add(fill);
  const cabin=new T.Group();
+ const {hatch,hatchLeaves}=createReefHatch(T,{closedShaft:false});
+ ocean.add(hatch);
  const steel=new T.MeshStandardMaterial({color:'#243c53',metalness:.63,roughness:.38,emissive:'#142338',emissiveIntensity:.46});
  const rim=new T.MeshStandardMaterial({color:'#6e99aa',metalness:.54,roughness:.33,emissive:'#2c4153',emissiveIntensity:.3});
  const light=new T.MeshBasicMaterial({color:'#75e7ff',toneMapped:false});
@@ -91,8 +95,9 @@ export function createPressureLift(camera){
  spray.frustumCulled=false;ocean.add(spray);
  const ease=(t,a,b)=>T.MathUtils.smoothstep(t,a,b);
  return {
-  duration:5.15,
-  render(renderer,city,camera,t,streetPosition,streetLook){
+  duration:hatchApproachDuration+5.15,
+  render(renderer,city,camera,elapsed,streetPosition,streetLook){
+   const t=Math.max(0,elapsed-hatchApproachDuration);
    const rise=ease(t,.24,3.98);
    light.color.setRGB(.46+.46*ease(t,2.62,3.5),.82-.44*ease(t,2.62,3.5),1.);
    const above=rise>.79;
@@ -110,18 +115,32 @@ export function createPressureLift(camera){
    cabin.position.z+=exit*5.6;
    const open=ease(t,4.06,4.86);
    doors.forEach((door,i)=>{door.position.x=(i?1:-1)*(1.21+open*1.28);});
-   surface.material.uniforms.clock.value=t;
-   glass.uniforms.clock.value=t;
+   const approaching=elapsed<hatchApproachDuration;
+   hatch.visible=approaching;
+   if(approaching){
+    hatch.position.copy(cabin.position);
+    hatch.position.z+=1.95;
+    const approach=ease(elapsed,0,.68);
+    const cross=ease(elapsed,.60,hatchApproachDuration);
+    camera.position.x+=.85*(1-approach);
+    camera.position.y+=.65*(1-approach);
+    camera.position.z+=T.MathUtils.lerp(7.95,4.45,approach)*(1-cross);
+    camera.lookAt(cabin.position.x,cabin.position.y+inclination*cross,cabin.position.z+T.MathUtils.lerp(1.95,streetLook.z-streetPosition.z,cross));
+    const opening=ease(elapsed,.38,1.26);
+    hatchLeaves.forEach((leaf,index)=>{leaf.position.x=(index?1:-1)*2.25*opening;});
+   }
+   surface.material.uniforms.clock.value=elapsed;
+   glass.uniforms.clock.value=elapsed;
    glass.uniforms.pressure.value=Math.sin(Math.PI*rise)*.78+.18;
    glass.uniforms.waterline.value=ease(t,2.91,3.59);
    glass.uniforms.clearing.value=ease(t,3.24,4.20);
    particles.forEach(([x,y,z,speed],i)=>{
-    points[i*3]=x+2+Math.sin(t+y)*.17;
-    points[i*3+1]=reefDatum-26+(y+t*speed)%29;
+    points[i*3]=x+2+Math.sin(elapsed+y)*.17;
+    points[i*3+1]=reefDatum-26+(y+elapsed*speed)%29;
     points[i*3+2]=z;
    });
    bubbles.attributes.position.needsUpdate=true;
-   if(!above)reef.tick(1/60,t);
+   if(!above)reef.tick(1/60,elapsed);
    renderer.render(outside,camera);
   },
   dispose(){
