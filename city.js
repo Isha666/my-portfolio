@@ -1,9 +1,11 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=skyline-traffic-2';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=pedals-camera-4';
 
 const canvas=document.querySelector('#cityView');
 const tower=document.querySelector('#tower');
 const enter=document.querySelector('#enterTower');
 const hint=document.querySelector('#driveHint'),pavilion=document.querySelector('#pavilion');
+const cameraPicker=document.querySelector('#cityCamera');
+const brake=document.querySelector('#brake'),accelerator=document.querySelector('#accelerator');
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fromReef=new URLSearchParams(location.search).get('from')==='reef';
 const floors=[
@@ -17,17 +19,26 @@ const floors=[
 let city;
 try{city=createCityScene(canvas);}catch(error){console.warn('City WebGL unavailable',error);document.body.classList.add('city-fallback');}
 let distance=city?0:towerDistance,approach=0,previous=0,enterStart=null,throttle=0,swipeY=null,lane=0,inspecting=false;
-let waitingForTraffic=false;
+const pressedKeys=new Set(),heldPedals=new Set();
+let speed=0,waitingForTraffic=false;
+const braking=()=>pressedKeys.has(' ')||heldPedals.has(brake);
+const accelerating=()=>pressedKeys.has('ArrowUp')||pressedKeys.has('w')||heldPedals.has(accelerator);
+function clearDrivingInput(){
+ pressedKeys.clear();heldPedals.clear();throttle=0;speed=0;
+ delete brake.dataset.held;delete accelerator.dataset.held;
+}
 let arriving=fromReef&&!reduced&&!!city,ascentTime=0;
 if(arriving)document.body.classList.add('city-arriving');
 function drive(delta){
- if(arriving||tower.open||enterStart!==null)return;
+ if(arriving||tower.open||enterStart!==null||braking())return false;
  inspecting=false;
  const wanted=Math.max(0,Math.min(driveLength,distance+delta));
  const next=city?city.drive(distance,wanted,lane):wanted;
- waitingForTraffic=Math.abs(next-wanted)>.01;
+ waitingForTraffic=Math.abs(next-wanted)>1e-5;
+ const moved=Math.abs(next-distance)>1e-5;
  distance=next;
  updateDrive();
+ return moved&&!waitingForTraffic;
 }
 function updateDrive(){
  const near=Math.abs(distance-towerDistance)<11;
@@ -35,9 +46,11 @@ function updateDrive(){
  enter.disabled=!near;
  enter.hidden=atPavilion;
  pavilion.hidden=!atPavilion;
- pavilion.textContent=inspecting?'Return to the road ↗':'Look toward Waterfront Pavilion ↗';
+ const action=inspecting?'Return to the road ↗':'Look toward Waterfront Pavilion ↗';
+ if(pavilion.textContent!==action)pavilion.textContent=action;
  const destination=near?'Leadership Tower':atPavilion?'Waterfront Pavilion':distance<41?'Right toward Waterfront Pavilion':distance<76?'Left toward Leadership Tower':distance>=driveLength?'End of the waterfront':'Scroll or swipe to drive';
- hint.textContent=(waitingForTraffic?'Waiting for traffic':destination)+' · '+(lane?'Right lane':'Left lane');
+ const status=(waitingForTraffic?'Waiting for traffic':destination)+' · '+(lane?'Right lane':'Left lane');
+ if(hint.textContent!==status)hint.textContent=status;
 }
 function changeLane(value){
  if(!city||arriving||tower.open||enterStart!==null)return;
@@ -47,7 +60,8 @@ function changeLane(value){
 }
 document.querySelector('#laneLeft').onclick=()=>changeLane(0);
 document.querySelector('#laneRight').onclick=()=>changeLane(1);
-pavilion.onclick=()=>{inspecting=!inspecting;updateDrive();};
+pavilion.onclick=()=>{speed=0;inspecting=!inspecting;updateDrive();};
+cameraPicker.disabled=!city;
 
 updateDrive();
 addEventListener('wheel',event=>{
@@ -67,24 +81,38 @@ canvas.addEventListener('pointermove',event=>{
 canvas.addEventListener('lostpointercapture',()=>{swipeY=null;});
 canvas.addEventListener('pointercancel',()=>{swipeY=null;});
 canvas.addEventListener('pointerup',()=>{swipeY=null;});
-const directions={ArrowUp:1,ArrowDown:-1,w:1,s:-1};
+const driveKeys=['ArrowUp','ArrowDown','w','s',' '];
+const backing=()=>throttle<0||pressedKeys.has('ArrowDown')||pressedKeys.has('s');
 addEventListener('keydown',event=>{
- if(tower.open||event.altKey||event.metaKey||event.ctrlKey)return;
+ if(tower.open||event.altKey||event.metaKey||event.ctrlKey||event.target.closest?.('select'))return;
  if(['ArrowLeft','ArrowRight','a','d'].includes(event.key)){
   event.preventDefault();changeLane(event.key==='ArrowRight'||event.key==='d'?1:0);return;
  }
- if(event.target.closest?.('button,a')||!directions[event.key])return;
- event.preventDefault();if(!event.repeat){throttle=directions[event.key];drive(throttle*1.2);}
+ if(!driveKeys.includes(event.key)||event.key===' '&&event.target.closest?.('button,a'))return;
+ event.preventDefault();pressedKeys.add(event.key);
 });
-addEventListener('keyup',event=>{if(directions[event.key]===throttle)throttle=0;});
-addEventListener('blur',()=>{throttle=0;});
-for(const [id,direction] of [['forward',1],['reverse',-1]]){
- const button=document.querySelector('#'+id);
- button.addEventListener('pointerdown',event=>{button.setPointerCapture(event.pointerId);throttle=direction;});
- button.addEventListener('lostpointercapture',()=>{throttle=0;});
- button.addEventListener('pointerup',()=>{throttle=0;});
- button.addEventListener('click',()=>drive(direction*2));
+addEventListener('keyup',event=>pressedKeys.delete(event.key));
+addEventListener('blur',clearDrivingInput);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)clearDrivingInput();});
+for(const button of [accelerator,brake]){
+ button.addEventListener('pointerdown',event=>{
+  if(event.button!==0)return;
+  button.setPointerCapture(event.pointerId);heldPedals.add(button);button.dataset.held='';
+  if(button===brake)speed=0;
+ });
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{
+  heldPedals.delete(button);delete button.dataset.held;
+ });
+ // Native keyboard activation still works when a pedal button has focus.
+ button.addEventListener('click',event=>{
+  if(event.detail!==0)return;
+  if(button===brake)speed=0;else drive(1.5);
+ });
 }
+const reverse=document.querySelector('#reverse');
+reverse.addEventListener('pointerdown',event=>{reverse.setPointerCapture(event.pointerId);throttle=-1;});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])reverse.addEventListener(type,()=>{throttle=0;});
+reverse.addEventListener('click',event=>{if(event.detail===0)drive(-1.5);});
 const floorButtons=document.querySelector('#floorButtons'),art=document.querySelector('#floorArt');
 const stage=document.querySelector('.elevator-stage'),display=document.querySelector('#floorDisplay');
 const org=document.querySelector('#floorOrg'),title=document.querySelector('#towerTitle'),story=document.querySelector('#floorStory'),replay=document.querySelector('#replayFloor');
@@ -134,14 +162,14 @@ function visitFloor(index){
 }
 replay.onclick=()=>visitFloor(currentFloor);
 function openTower(){
- enterStart=null;throttle=0;
+ enterStart=null;clearDrivingInput();
  tower.showModal();
  if(currentFloor<0)floorButtons.firstElementChild.focus();
 }
 enter.onclick=()=>{
  if(enter.disabled||arriving||enterStart!==null)return;
  if(reduced||!city){openTower();return;}
- enterStart=performance.now();enter.disabled=true;
+ clearDrivingInput();enterStart=performance.now();enter.disabled=true;
 };
 document.querySelector('#leaveTower').onclick=()=>tower.close();
 tower.addEventListener('close',()=>{
@@ -181,7 +209,14 @@ function frame(now){
  requestAnimationFrame(frame);
  const dt=Math.min(.045,(now-(previous||now))/1000);previous=now;
  if(document.hidden)return;
- if(throttle)drive(throttle*dt*16);
+ if(!arriving&&!tower.open&&enterStart===null){
+  if(braking())speed=0;
+  else if(backing()){speed=0;drive(-dt*8);}
+  else{
+   speed=accelerating()?Math.min(16,speed+dt*30):Math.max(0,speed-dt*68);
+   if(speed&&!drive(speed*dt))speed=0;
+  }
+ }
  if(timer){
   const nearest=Math.min(...[27,53,105].map(stop=>Math.abs(distance-stop)));
   volume.gain.setTargetAtTime(tower.open?.035:.10+.54*Math.max(0,1-nearest/22),audio.currentTime,.16);
@@ -197,7 +232,7 @@ function frame(now){
   approach=reduced?desired:approach+(desired-approach)*(1-Math.exp(-dt*6));
  }
  if(arriving)ascentTime+=dt;
- const driving=city.render(distance,reduced?0:dt,approach,arriving?ascentTime:null,lane,Math.abs(distance-pavilionDistance)<8?-1:1);
+ const driving=city.render(distance,dt,approach,arriving?ascentTime:null,lane,Math.abs(distance-pavilionDistance)<8?-1:1,cameraPicker.value,reduced);
  if(arriving&&driving){
   arriving=false;document.body.classList.remove('city-arriving');
  }

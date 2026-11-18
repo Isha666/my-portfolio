@@ -349,7 +349,9 @@ export function createCityScene(canvas){
    part(terraces,box,cobalt,slide,floor*2.38+1.19,z,5.7,2.38,7.1);
    part(terraces,box,pearl,slide,floor*2.38+2.31,z,6.22,.15,7.42);
    part(terraces,box,neon[1],slide-3.06,floor*2.38+2.39,z,.09,.075,7.33);
-   for(const k of [-2.3,0,2.3])part(terraces,box,neon[3],slide-2.88,floor*2.38+1.18,z+k,.06,.86,1.31);
+   for(const k of [-2.3,0,2.3])for(const side of [-1,1]){
+    part(terraces,box,neon[(floor+side)%3===0?1:3],slide+side*2.88,floor*2.38+1.18,z+k,.06,.86,1.31);
+   }
   }
  }
  part(terraces,ball,pearl,1.8,27.1,0,4.7,1.35,18.5);
@@ -372,6 +374,20 @@ export function createCityScene(canvas){
  for(let i=0;i<28;i++){
   const a=i*Math.PI*2/28;
   part(sphereHall,ball,neon[i%3],1.10,7.85+Math.sin(a)*6.15,Math.cos(a)*4.94,.082,.15,.18);
+ }
+ // Frame each landmark from an open side of its site so nearby towers cannot clip the view.
+ const landmarkViews={
+  skypark:{root:terraces,position:[51,24,13],look:[0,14.5,0],layer:1},
+  ring:{root:sphereHall,position:[25,10,5],look:[0,7.5,0],layer:2},
+  spires:{root:crowns,position:[-62,31,14],look:[0,25,0],layer:3}
+ };
+ for(const view of Object.values(landmarkViews)){
+  part(view.root,box,slab,0,-.19,0,14,.36,37);
+  view.root.traverse(object=>object.layers.enable(view.layer));
+  for(const object of scene.children)if(object.isLight||object===sky)object.layers.enable(view.layer);
+  view.root.updateMatrixWorld(true);
+  view.position=view.root.localToWorld(new T.Vector3(...view.position));
+  view.look=view.root.localToWorld(new T.Vector3(...view.look));
  }
  for(let d=2;d<160;d+=13)for(const side of [-1,1]){
   const hero=side===1&&d===80;
@@ -546,11 +562,11 @@ export function createCityScene(canvas){
   resize,
   drive(from,to,lane){return trafficFlow.drive(from,to,occupiedLanes(lane));},
   canChangeLane(distance,lane,previousLane){return occupiedLanes(previousLane).length===1&&trafficFlow.canChange(distance,lane);},
-  render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1){
-  time+=dt;
+  render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false){
+  if(!reduced)time+=dt;
   const targetLane=laneOffsets[lane];
   trafficFlow.tick(dt,{distance,lanes:occupiedLanes(lane)});
-  lanePosition=dt?T.MathUtils.damp(lanePosition,targetLane,7,dt):targetLane;
+  lanePosition=reduced?targetLane:T.MathUtils.damp(lanePosition,targetLane,7,dt);
   streetPoint(hero.position,distance,lanePosition,.03);
   hero.rotation.y=-heading(distance)+(targetLane-lanePosition)*.047;
   for(const {sign,index,distance:at} of signs){
@@ -582,6 +598,23 @@ export function createCityScene(canvas){
   streetPosition.x-=Math.sin(angle)*behind;streetPosition.z+=Math.cos(angle)*behind;
   const farFromLift=T.MathUtils.smoothstep(distance,0,13);
   streetPoint(streetLook,distance+lookDistance,T.MathUtils.lerp(lanePosition*.65,stopSide*14.5,approach),T.MathUtils.lerp(mobile?.42:1.65*farFromLift+1.1,2.4,approach));
+  const mode=ascentTime!==null||approach>.002?'chase':cameraMode;
+  let fov=mobile?65:68;
+  camera.layers.set(landmarkViews[mode]?.layer??0);
+  if(mode==='hood'){
+   streetPoint(streetPosition,distance+1.1,lanePosition,1.35);
+   streetPoint(streetLook,distance+22,lanePosition,2.25);
+   fov=mobile?65:70;
+  }else if(mode==='skyline'){
+   streetPoint(streetPosition,distance-12,lanePosition-3,mobile?13:17);
+   streetPoint(streetLook,distance+22,0,mobile?12:15);
+   fov=72;
+  }else if(landmarkViews[mode]){
+   const view=landmarkViews[mode];
+   streetPosition.copy(view.position);streetLook.copy(view.look);
+   fov=mobile?mode==='skypark'?82:72:52;
+  }
+  if(camera.fov!==fov){camera.fov=fov;camera.updateProjectionMatrix();}
   if(ascentTime!==null){
    pressureLift??=createPressureLift(camera);
    if(ascentTime<pressureLift.duration){
@@ -591,7 +624,7 @@ export function createCityScene(canvas){
    }
   }
   if(pressureLift){pressureLift.dispose();pressureLift=null;renderer.renderLists.dispose();}
-  hero.visible=true;
+  hero.visible=mode!=='hood';
   camera.position.copy(streetPosition);camera.lookAt(streetLook);renderer.render(scene,camera);
   return true;
  },dispose(){pressureLift?.dispose();disposeScene(scene);for(const material of billboardMaterials){material.map.dispose();material.dispose();}renderer.dispose();}};
