@@ -1,9 +1,9 @@
-import {createCityScene,towerDistance,driveLength} from './city-scene.js?v=neon-street-3';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=turning-neon-3';
 
 const canvas=document.querySelector('#cityView');
 const tower=document.querySelector('#tower');
 const enter=document.querySelector('#enterTower');
-const hint=document.querySelector('#driveHint');
+const hint=document.querySelector('#driveHint'),pavilion=document.querySelector('#pavilion');
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fromReef=new URLSearchParams(location.search).get('from')==='reef';
 const floors=[
@@ -16,19 +16,33 @@ const floors=[
 ];
 let city;
 try{city=createCityScene(canvas);}catch(error){console.warn('City WebGL unavailable',error);document.body.classList.add('city-fallback');}
-let distance=city?0:towerDistance,approach=0,previous=0,enterStart=null,throttle=0,swipeY=null;
+let distance=city?0:towerDistance,approach=0,previous=0,enterStart=null,throttle=0,swipeY=null,lane=0,inspecting=false;
 let arriving=fromReef&&!reduced&&!!city,ascentTime=0;
 if(arriving)document.body.classList.add('city-arriving');
 function drive(delta){
  if(arriving||tower.open||enterStart!==null)return;
+ inspecting=false;
  distance=Math.max(0,Math.min(driveLength,distance+delta));
  updateDrive();
 }
 function updateDrive(){
- const near=Math.abs(distance-towerDistance)<15;
+ const near=Math.abs(distance-towerDistance)<11;
+ const atPavilion=Math.abs(distance-pavilionDistance)<8;
  enter.disabled=!near;
- hint.textContent=near?'Leadership Tower · pull over to enter':distance>=driveLength?'End of the waterfront · scroll back to return':'Scroll or swipe to drive';
+ enter.hidden=atPavilion;
+ pavilion.hidden=!atPavilion;
+ pavilion.textContent=inspecting?'Return to the road ↗':'Look toward Waterfront Pavilion ↗';
+ const destination=near?'Leadership Tower':atPavilion?'Waterfront Pavilion':distance<41?'Right toward Waterfront Pavilion':distance<76?'Left toward Leadership Tower':distance>=driveLength?'End of the waterfront':'Scroll or swipe to drive';
+ hint.textContent=destination+' · '+(lane?'Right lane':'Left lane');
 }
+function changeLane(value){
+ if(!city||arriving||tower.open||enterStart!==null)return;
+ lane=value;inspecting=false;updateDrive();
+}
+document.querySelector('#laneLeft').onclick=()=>changeLane(0);
+document.querySelector('#laneRight').onclick=()=>changeLane(1);
+pavilion.onclick=()=>{inspecting=!inspecting;updateDrive();};
+
 updateDrive();
 addEventListener('wheel',event=>{
  if(event.ctrlKey||tower.open)return;
@@ -49,7 +63,11 @@ canvas.addEventListener('pointercancel',()=>{swipeY=null;});
 canvas.addEventListener('pointerup',()=>{swipeY=null;});
 const directions={ArrowUp:1,ArrowDown:-1,w:1,s:-1};
 addEventListener('keydown',event=>{
- if(tower.open||event.target.closest?.('button,a')||!directions[event.key])return;
+ if(tower.open||event.altKey||event.metaKey||event.ctrlKey)return;
+ if(['ArrowLeft','ArrowRight','a','d'].includes(event.key)){
+  event.preventDefault();changeLane(event.key==='ArrowRight'||event.key==='d'?1:0);return;
+ }
+ if(event.target.closest?.('button,a')||!directions[event.key])return;
  event.preventDefault();if(!event.repeat){throttle=directions[event.key];drive(throttle*1.2);}
 });
 addEventListener('keyup',event=>{if(directions[event.key]===throttle)throttle=0;});
@@ -123,7 +141,7 @@ document.querySelector('#leaveTower').onclick=()=>tower.close();
 tower.addEventListener('close',()=>{
  clearTimeout(elevatorTimer);clearInterval(doorTimer);
  if(currentFloor>=0)showFloor();
- stage.classList.remove('doors-closed');approach=0;updateDrive();enter.focus({preventScroll:true});
+ stage.classList.remove('doors-closed');approach=0;inspecting=false;updateDrive();enter.focus({preventScroll:true});
 });
 
 const sound=document.querySelector('#citySound');
@@ -168,8 +186,12 @@ function frame(now){
   approach=t*t*(3-2*t);
   if(t===1)openTower();
  }
+ if(enterStart===null&&!tower.open){
+  const desired=inspecting?1:0;
+  approach=reduced?desired:approach+(desired-approach)*(1-Math.exp(-dt*6));
+ }
  if(arriving)ascentTime+=dt;
- const driving=city.render(distance,reduced?0:dt,approach,arriving?ascentTime:null);
+ const driving=city.render(distance,reduced?0:dt,approach,arriving?ascentTime:null,lane,Math.abs(distance-pavilionDistance)<8?-1:1);
  if(arriving&&driving){
   arriving=false;document.body.classList.remove('city-arriving');
  }
