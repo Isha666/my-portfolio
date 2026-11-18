@@ -1,6 +1,6 @@
 import * as T from './vendor/three.module.js';
 import {disposeScene} from './scene-resources.js';
-import {createMarineWorld} from './marine-world.js?v=glass-lift-1';
+import {createMarineWorld} from './marine-world.js?v=portfolio-scene-1';
 
 export function createPressureLift(camera){
  const reef=createMarineWorld(T,camera,null,{preview:true});

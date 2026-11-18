@@ -1,7 +1,7 @@
 import * as T from './vendor/three.module.js';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=light-show-1';
-import {createPressureLift} from './city-lift.js?v=reef-view-2';
+import {createPressureLift} from './city-lift.js?v=portfolio-scene-1';
 
 export const towerDistance=85;
 export const driveLength=107;
@@ -756,5 +756,5 @@ export function createCityScene(canvas){
   hero.visible=mode!=='hood';
   camera.position.copy(streetPosition);camera.lookAt(streetLook);renderer.render(scene,camera);
   return true;
- },dispose(){pressureLift?.dispose();disposeScene(scene);for(const material of billboardMaterials){material.map.dispose();material.dispose();}renderer.dispose();}};
+ },dispose(){pressureLift?.dispose();disposeScene(scene);for(const material of billboardMaterials){material.map.dispose();material.dispose();}renderer.dispose();renderer.forceContextLoss();}};
 }

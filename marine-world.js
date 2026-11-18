@@ -105,7 +105,8 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
  const departCity=()=>{
   if(!active||cityButton.disabled)return;
   setMap(false);closeCard();clearMovement();interrupt();cityButton.disabled=hatchAction.disabled=true;
-  if(reduced){location.assign('./city.html?from=reef');return;}
+  const enterCity=()=>dispatchEvent(new Event('portfolio:enter-city'));
+  if(reduced){enterCity();return;}
   const end=hatch.position.clone().add(V(0,-.9,3.5));
   const rotation=new T.Euler().setFromQuaternion(new T.Quaternion().setFromRotationMatrix(new T.Matrix4().lookAt(end,hatch.position,V(0,1,0))),'YXZ');
   const threshold=hatch.localToWorld(V(0,0,.44));
@@ -116,7 +117,7 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
    .to(pos,{x:threshold.x,y:threshold.y,z:threshold.z,duration:.55,ease:'power2.in'},.8)
    .call(()=>{
     const veil=document.createElement('div');veil.className='reef-city-lock';veil.setAttribute('aria-hidden','true');document.body.append(veil);
-    veil.addEventListener('animationend',()=>location.assign('./city.html?from=reef'),{once:true});
+    veil.addEventListener('animationend',enterCity,{once:true});
    });
  };
  cityButton.onclick=hatchAction.onclick=departCity;

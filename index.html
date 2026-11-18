@@ -1,7 +1,6 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Isha — A World in the Making</title><link rel="stylesheet" href="style.css?v=leadership-button-1"><link rel="modulepreload" href="vendor/three.module.js"><link rel="modulepreload" href="vendor/three.core.js"></head><body>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Isha — A World in the Making</title><link rel="stylesheet" href="style.css?v=leadership-button-1"><link rel="modulepreload" href="vendor/three.module.js"><link rel="modulepreload" href="vendor/three.core.js"><link rel="stylesheet" href="city.css?v=portfolio-scene-1"></head><body>
 <canvas id="world" aria-label="A first-person reindeer sleigh ride through a snow-covered forest with igloos and alpine mountains"></canvas><div class="grain"></div>
-<header><a class="brand" href="#" aria-label="Return to start">isha<span class="brand-star" aria-hidden="true"></span><small>A WORLD IN THE MAKING</small></a><nav aria-label="Portfolio sections"><button data-section="home">Home</button><button data-section="about" id="returnIgloo">About</button><button data-section="projects" title="Explore projects in the botanical garden">Projects</button><button data-section="skills" title="Dive straight into the underwater skills reef">Skills</button><button class="leadership-nav" type="submit" form="leadership-entry" name="from" value="reef">Leadership and Achievements</button><button data-section="contact" disabled title="Contact garden — coming next">Contact <small>soon</small></button></nav><button class="outline" id="indexBtn">Open field guide <span>↗</span></button></header>
-<form id="leadership-entry" action="./city.html" method="get" hidden></form>
+<header><a class="brand" href="#" aria-label="Return to start">isha<span class="brand-star" aria-hidden="true"></span><small>A WORLD IN THE MAKING</small></a><nav aria-label="Portfolio sections"><button data-section="home">Home</button><button data-section="about" id="returnIgloo">About</button><button data-section="projects" title="Explore projects in the botanical garden">Projects</button><button data-section="skills" title="Dive straight into the underwater skills reef">Skills</button><button class="leadership-nav" type="button" data-section="leadership">Leadership and Achievements</button><button data-section="contact" disabled title="Contact garden — coming next">Contact <small>soon</small></button></nav><button class="outline" id="indexBtn">Open field guide <span>↗</span></button></header>
 <div class="chapter-mark"><span id="chapterNum">01</span><i></i><span id="seasonLabel">THE QUIET BEFORE THE SPARK</span></div>
 <main id="copy"><p class="eyebrow" id="eyebrow">WINTER / A LITTLE INTRODUCTION</p><h1 id="title">A curious mind.<br>A world to <em>make.</em></h1><p class="intro" id="intro">Hi, I’m Isha. Welcome to my little corner of the world.<br>Follow the path. There’s a story around every bend.</p><button class="primary" id="explore">Meet me at the observatory <span>↗</span></button><p class="aside" id="aside">A winter study. Best explored slowly.</p></main>
 <div class="landmark" id="landmark"><span class="landmark-dot"></span><div><small>YOUR NEXT DISCOVERY</small><button id="landmarkBtn">The observatory ↗</button></div></div>
@@ -18,6 +17,57 @@ loadingPanel.querySelector('a').onclick=event=>{
  document.querySelector('#quick-about').showModal();
 };
 </script>
+<template id="cityTemplate">
+<section id="cityScene" aria-label="Leadership and Achievements">
+ <canvas id="cityView" aria-label="A glittery pastel-pink Porsche 911-style coupe on a neon waterfront boulevard"></canvas>
+
+  <section class="street-ui" aria-label="City drive">
+   <div class="city-intro"><p>Leadership &amp; Achievements</p><h1>City After Dark</h1><span class="look-hint">Drag to look around</span></div>
+   <label class="camera-picker">Camera
+    <select id="cityCamera">
+     <option value="chase">Chase</option>
+     <option value="hood">Hood</option>
+     <option value="skyline">Skyline</option>
+     <option value="skypark">SkyPark towers</option>
+     <option value="ring">Ring Hall</option>
+     <option value="spires">Twin spires</option>
+    </select>
+   </label>
+   <div class="drive">
+    <button id="citySound" type="button" aria-pressed="false">Sound off</button>
+    <div class="drive-status">
+     <span id="driveHint">Drag to look around</span>
+     <button id="pavilion" hidden>Look toward Waterfront Pavilion ↗</button>
+     <button id="enterTower">Enter the Leadership Tower ↗</button>
+    </div>
+    <div class="drive-controls" role="group" aria-label="Driving controls">
+     <button id="brake" class="city-pedal" type="button">Brake</button>
+     <div class="drive-pad" role="group" aria-label="Directional controls">
+      <button id="forward" aria-label="Drive forward">↑</button>
+      <button id="laneLeft" aria-label="Switch to left lane">←</button>
+      <button id="reverse" aria-label="Drive backward">↓</button>
+      <button id="laneRight" aria-label="Switch to right lane">→</button>
+     </div>
+     <button id="accelerator" class="city-pedal" type="button">Accelerator</button>
+    </div>
+   </div>
+  </section>
+  <dialog id="tower" aria-labelledby="towerTitle">
+   <div class="tower-nav"><span>Leadership Tower</span><button id="leaveTower">Return to car ↗</button></div>
+   <div class="tower-body">
+    <nav aria-label="Elevator floors"><span class="floor-label">ELEVATOR</span><div id="floorButtons"></div></nav>
+    <div class="elevator-stage">
+     <div class="floor-number" aria-hidden="true"><span id="floorDisplay">G</span><span>↑</span></div>
+     <div id="floorArt" aria-hidden="true"></div>
+     <div class="floor-copy" aria-live="polite"><p id="floorOrg">Waterfront district</p><h2 id="towerTitle">Take the elevator</h2><p id="floorStory">Choose a floor to explore a role.</p><button id="replayFloor" hidden>Replay animation</button></div>
+     <div class="lift-doors" aria-hidden="true"><i></i><i></i></div>
+    </div>
+   </div>
+  </dialog>
+  <div class="lift-caption" role="status">Waterfront ascent</div>
+
+</section>
+</template>
 <dialog id="homeIntro" aria-label="Portfolio introduction">
  <video playsinline preload="metadata" aria-hidden="true"></video>
  <span class="intro-travel-star" aria-hidden="true" hidden></span>
@@ -27,7 +77,7 @@ loadingPanel.querySelector('a').onclick=event=>{
  <button class="intro-skip" type="button" autofocus>Skip intro</button>
 </dialog>
 <script type="module" src="home-intro.js?v=city-lift-1"></script>
-<script src="vendor/gsap.min.js"></script><script type="module" src="winter.js?v=city-nav-1"></script><script>
+<script src="vendor/gsap.min.js"></script><script type="module" src="winter.js?v=city-scene-1"></script><script>
 if ('serviceWorker' in navigator) {
  window.addEventListener('portfolio-ready', () => {
   navigator.serviceWorker.register('./portfolio-offline.js').catch(error => console.warn('Offline cache unavailable', error));
