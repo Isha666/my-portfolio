@@ -88,5 +88,17 @@ body.in-city{overflow:hidden}
 @media(max-height:535px){.drive-pad{grid-template-columns:repeat(3,31px);grid-template-rows:repeat(3,30px)}.drive .city-pedal{height:59px}.camera-picker{top:76px;bottom:auto}.city-intro{padding-top:28px}}
 
 .look-hint{display:inline-block;margin-top:8px;color:#f0deff;font-size:.76rem;text-shadow:0 1px 12px #141024}
-#citySound{justify-self:end;font-size:.7rem;padding:.32rem .62rem}
+#citySound{flex:none;font-size:.7rem;padding:.32rem .62rem}
 .tower-body nav{display:block}
+
+@media(min-width:850px){
+ .drive{align-self:flex-end}
+}
+@media(max-height:535px){
+ .street-ui{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+ .drive{gap:5px;padding-block:5px}
+}
+@media(max-width:350px){
+ .drive-controls{gap:8px}
+ .drive .city-pedal{width:66px}
+}

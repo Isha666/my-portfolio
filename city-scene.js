@@ -700,12 +700,14 @@ export function createCityScene(canvas){
   });
   party.forEach((beam,i)=>{beam.rotation.y=Math.sin(time*.9+i)*.73;beam.scale.z=2.7+Math.sin(time*2+i)*.46;});
   const mobile=camera.aspect<.76;
-  const lookDistance=T.MathUtils.lerp(mobile?5.6:13,0,approach);
+  // A shorter viewport gives the driving controls a larger share of the frame.
+  const shortView=1-T.MathUtils.smoothstep(innerHeight,400,620);
+  const lookDistance=T.MathUtils.lerp(mobile?5.6:13-7.4*shortView,0,approach);
   streetPoint(streetPosition,distance,T.MathUtils.lerp(lanePosition,stopSide*8,approach),T.MathUtils.lerp(mobile?4.9:5.5,2.15,approach));
   const behind=T.MathUtils.lerp(mobile?11:9.4,1.4,approach),angle=heading(distance);
   streetPosition.x-=Math.sin(angle)*behind;streetPosition.z+=Math.cos(angle)*behind;
   const farFromLift=T.MathUtils.smoothstep(distance,0,13);
-  streetPoint(streetLook,distance+lookDistance,T.MathUtils.lerp(lanePosition*.65,stopSide*14.5,approach),T.MathUtils.lerp(mobile?.42:1.65*farFromLift+1.1,2.4,approach));
+  streetPoint(streetLook,distance+lookDistance,T.MathUtils.lerp(lanePosition*.65,stopSide*14.5,approach),T.MathUtils.lerp((mobile?.42:1.65*farFromLift+1.1)-1.35*shortView,2.4,approach));
   const mode=ascentTime!==null||approach>.002?'chase':cameraMode;
   let fov=mobile?65:68;
   camera.layers.set(landmarkViews[mode]?.layer??0);
