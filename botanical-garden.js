@@ -2,7 +2,7 @@ import {growGardenTree} from './garden-tree-form.js';
 import {addGardenBreeze} from './garden-breeze.js';
 import {createGardenButterflies} from './garden-butterflies.js';
 import {organicGeometry} from './garden-plant-geometry.js?v=rounded-1';
-import {createGardenLakeside} from './garden-lakeside.js?v=discard-build-1';
+import {createGardenLakeside} from './garden-lakeside.js?v=compact-shore-1';
 import {createGardenBridge} from './garden-bridge.js?v=teal-1';
 import {createProjectTreasures} from './project-treasures.js?v=scene-lifetime-1';
 import {createGardenCarriage} from './garden-carriage.js?v=route-heading-1';

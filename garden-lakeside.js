@@ -16,7 +16,26 @@ export function createGardenLakeside(THREE,scene,routeX,routeY,terrain,breeze){
  function instance(g,m,x,y,z,sx=1,sy=sx,sz=sx,rx=0,ry=0,rz=0){const key=g.uuid+m.uuid+(plantingGrove?'grove':'lake');if(!batches.has(key))batches.set(key,{g,m,parent:plantingGrove?grove:scene,items:[]});batches.get(key).items.push([x,y,z,sx,sy,sz,rx,ry,rz]);}
  function mesh(g,m,parent=scene){const o=new THREE.Mesh(g,m);o.castShadow=o.receiveShadow=true;parent.add(o);return o;}
  function branch(a,b,r,m=bark,parent=plantingGrove?grove:scene){const p=new THREE.Vector3(...a),q=new THREE.Vector3(...b),d=q.clone().sub(p),o=mesh(new THREE.CylinderGeometry(r*.65,r,d.length(),7),m,parent);o.position.copy(p.add(q).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return o;}
- function blossom(x,y,z,size=1,color=0){for(let j=0;j<5;j++){const a=j*Math.PI*.4;instance(petal,pinks[color%3],x+Math.cos(a)*.068*size,y,z+Math.sin(a)*.068*size,size,size,size,.35+Math.sin(x*3+z)*.9,a,Math.cos(z*2+y)*.8);}}
+ // One instance per flower head keeps the far shore's instance buffers compact.
+ function flowerHead(count,radius,scale){
+  const vertices=[],indices=[];
+  for(let i=0;i<count;i++){
+   const angle=i/count*Math.PI*2,c=Math.cos(angle),s=Math.sin(angle),base=vertices.length/3;
+   for(let j=0;j<pv.length;j+=3){
+    const x=pv[j]*scale,z=pv[j+2]*scale;
+    vertices.push(c*(radius+x)+s*z,pv[j+1]*scale,s*(radius+x)-c*z);
+   }
+   indices.push(...pi.map(index=>base+index));
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  geometry.setIndex(indices);geometry.computeVertexNormals();
+  return geometry;
+ }
+ const blossomHead=flowerHead(5,.068,1),meadowHead=flowerHead(7,.16,1.9);
+ function blossom(x,y,z,size=1,color=0){
+  instance(blossomHead,pinks[color%3],x,y,z,size,size,size,.35+Math.sin(x*3+z)*.9,Math.cos(z*2+y)*.8,0);
+ }
  const limbGeo=new THREE.CylinderGeometry(.63,1,1,7),limbAxis=new THREE.Vector3(0,1,0);
  const limbRotation=new THREE.Quaternion(),limbEuler=new THREE.Euler();
  function treeLimb(a,b,r){
@@ -26,7 +45,7 @@ export function createGardenLakeside(THREE,scene,routeX,routeY,terrain,breeze){
  }
  function tree(x,z,h,cherry=true,base=0){
   if(plantingGrove)base=terrain(x,z);
-  const tint=Math.floor(rand()*3),density=z<-132?52:78;
+  const tint=Math.floor(rand()*3),density=z<-132?30:58;
   growGardenTree(THREE,x,base,z,h,rand,treeLimb,(center,width,angle,limb)=>{
    for(let k=0;k<(cherry?density:45);k++){
     const az=rand()*6.28,r=Math.sqrt(rand())*width;
@@ -44,7 +63,7 @@ export function createGardenLakeside(THREE,scene,routeX,routeY,terrain,breeze){
  const stemGeo=new THREE.CylinderGeometry(.013,.018,1,5),creamPetal=mat('#fff4da',{side:THREE.DoubleSide}),yellowPetal=mat('#efc34e',{side:THREE.DoubleSide}),centre=mat('#b18a2c');
  const violetPetal=mat('#a68bde',{side:THREE.DoubleSide}),coralPetal=mat('#ed7198',{side:THREE.DoubleSide});
  // Beds follow the actual bank elevation so flowers remain above the sloping ground.
- for(let i=0;i<14500;i++){const z=i<9000?-96-rand()*26:-122-rand()*35,x=routeX(z)+(i%2?1:-1)*(3.5+rand()*86),base=terrain(x,z)+.03,h=.35+rand()*.55;if(base<-.55)continue;instance(stemGeo,leaves[0],x,base+h/2,z,1,h,1);const pm=[yellowPetal,creamPetal,violetPetal,coralPetal,pinks[0]][Math.floor((x+100)/5+(-z)/7)%5];for(let j=0;j<7;j++){const a=j/7*6.28;instance(petal,pm,x+Math.cos(a)*.16,base+h,z+Math.sin(a)*.16,1.9,1.9,1.9,.15,a,0);}instance(ball,centre,x,base+h+.02,z,.05,.025,.05);instance(leaf,leaves[i%3],x,base+h*.45,z,1,1,1,.4,i,0);}
+ for(let i=0;i<6800;i++){const z=i<4300?-96-rand()*26:-122-rand()*35,x=routeX(z)+(i%2?1:-1)*(3.5+rand()*86),base=terrain(x,z)+.03,h=.35+rand()*.55;if(base<-.55)continue;instance(stemGeo,leaves[0],x,base+h/2,z,1,h,1);const pm=[yellowPetal,creamPetal,violetPetal,coralPetal,pinks[0]][Math.floor((x+100)/5+(-z)/7)%5];instance(meadowHead,pm,x,base+h,z,1,1,1,.15,i,0);instance(ball,centre,x,base+h+.02,z,.05,.025,.05);instance(leaf,leaves[i%3],x,base+h*.45,z,1,1,1,.4,i,0);}
  // Layered rear and side groves replace the empty grass horizon.
  for(let row=0;row<2;row++)for(let i=0;i<22;i++)tree(-71+i*6.8+(rand()-.5)*4,-134-row*15-rand()*10,6.8+rand()*6.6,(i+row)%4!==0);
  for(const side of [-1,1]){
@@ -69,7 +88,7 @@ export function createGardenLakeside(THREE,scene,routeX,routeY,terrain,breeze){
  const floating=[];for(let i=0;i<750;i++){const z=-21-rand()*78,x=(rand()>.5?1:-1)*(4+rand()*15);floating.push([x,z]);instance(petal,pinks[i%3],x,-.64,z,.7,.7,.7,0,rand()*6,0);}
  batches.forEach(({g,m,parent,items})=>{const inst=new THREE.InstancedMesh(g,m,items.length);items.forEach((v,i)=>{dummy.position.set(v[0],v[1],v[2]);dummy.scale.set(v[3],v[4],v[5]);dummy.rotation.set(v[6],v[7],v[8]);dummy.updateMatrix();inst.setMatrixAt(i,dummy.matrix);});inst.castShadow=false;inst.receiveShadow=true;inst.computeBoundingSphere();parent.add(inst);});
  batches.clear();
- const drifting=new THREE.InstancedMesh(petal,pinks[1],96);scene.add(drifting);
+ const drifting=new THREE.InstancedMesh(petal,pinks[1],96);drifting.frustumCulled=false;scene.add(drifting);
  // The far landing is always present: perspective and the bridge crest reveal it naturally.
  return {tick(time,cameraZ=8){for(let i=0;i<96;i++){const t=(time*.045+i/96)%1,side=i%2?1:-1,z=-105-(i%9)*2.5;dummy.position.set(routeX(z)+side*(4.2-t*3.6)+Math.sin(time*.4+i)*.3,6.7-t*6.5,z+Math.sin(i*2)*2+t);dummy.rotation.set(time*.6+i,time*.35+i,i);dummy.scale.setScalar(.9);dummy.updateMatrix();drifting.setMatrixAt(i,dummy.matrix);}drifting.instanceMatrix.needsUpdate=true;boats.forEach(({g,x,z,angle,rower},i)=>{rower.tick(time);const crossing=i<3,phase=time*.075+i*2.1;g.position.set(crossing?Math.sin(phase)*30:x+Math.sin(phase)*.5,-.68+Math.sin(time*.8+i)*.035,z+Math.cos(time*.1+i)*.3);g.rotation.set(Math.sin(time*.6+i)*.018,crossing?(Math.cos(phase)>0?-Math.PI/2:Math.PI/2):angle+Math.sin(time*.13+i)*.025,Math.sin(time*.7+i)*.025);});}};
 }
