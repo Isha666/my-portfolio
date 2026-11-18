@@ -453,6 +453,6 @@ header {background:rgb(0 0 0 / 16%);border-bottom:0;text-shadow:0 1px 4px #0d1e2
 
 .garden-departure :is(.marine-hud,#snowmanHome,.home-sound){visibility:hidden}
 
-.reef-city-lock{position:fixed;inset:0;z-index:200;pointer-events:auto;background:radial-gradient(ellipse,#76e1ed,#152d48 50%,#091225);animation:reef-city-iris .45s ease-in both}
+.reef-city-lock{position:fixed;inset:0;z-index:200;pointer-events:auto;background:radial-gradient(ellipse,#183c4d,#0c2134 50%,#091225);animation:reef-city-iris .22s ease-in both}
 @keyframes reef-city-iris{from{opacity:0;clip-path:circle(5%)}to{opacity:1;clip-path:circle(85%)}}
 @media(max-width:600px){.marine-top{flex-wrap:wrap}.marine-top [data-city]{white-space:nowrap}}

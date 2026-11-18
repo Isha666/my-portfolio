@@ -2,7 +2,7 @@ import {disposeScene} from './scene-resources.js';
 import {createRenderQuality} from './render-quality.js?v=garden-clarity-2';
 import {createAurora} from './winter-aurora.js?v=sky-coverage-1';
 import {createPineGeometry,addSnowyBoughs} from './winter-pines.js?v=trail-lod-1';
-import {createSeasonPortal} from './season-portal.js?v=city-lift-1';
+import {createSeasonPortal} from './season-portal.js?v=compact-shore-1';
 import * as THREE from './vendor/three.module.js';
 import {createSnowmanHome} from './snowman-home.js?v=screen-buffers-1';
 import {createGardenCrossing} from './garden-crossing.js?v=crossing-lifetime-1';

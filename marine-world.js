@@ -71,13 +71,34 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
  const stick=hud.querySelector('.marine-stick'),thumb=stick.querySelector('i'),axisInput=new T.Vector2();let stickPointer=null;
  const hatch=new T.Group();
  hatch.position.set(11,8.7,-18);hatch.rotation.x=Math.PI/5;scene.add(hatch);
- const hatchRim=new T.Mesh(new T.TorusGeometry(2.25,.15,10,56),new T.MeshBasicMaterial({color:'#77e8ff'}));
- const hatchDoor=new T.Mesh(new T.CylinderGeometry(2.14,2.14,.18,40),new T.MeshStandardMaterial({color:'#446775',metalness:.52,roughness:.44,side:T.DoubleSide}));
- hatchDoor.rotation.x=Math.PI/2;hatch.add(hatchRim,hatchDoor);
- for(const x of [-1,1]){
-  const lock=new T.Mesh(new T.BoxGeometry(.19,3.25,.24),hatchDoor.material);
-  lock.position.set(x*.54,0,.12);hatch.add(lock);
+ const hatchSteel=new T.MeshStandardMaterial({color:'#314555',metalness:.55,roughness:.45});
+ const hatchGlow=new T.MeshBasicMaterial({color:'#7af0ff',toneMapped:false});
+ const collar=new T.Mesh(new T.CylinderGeometry(2.72,3.12,2.9,48,1,true),new T.MeshStandardMaterial({color:'#384954',metalness:.48,roughness:.65,side:T.DoubleSide}));
+ collar.rotation.x=Math.PI/2;collar.position.z=-1.39;hatch.add(collar);
+ const ring=(radius,tube,material,z)=>{
+  const part=new T.Mesh(new T.TorusGeometry(radius,tube,12,64),material);part.position.z=z;hatch.add(part);
+ };
+ ring(2.53,.24,hatchSteel,.03);ring(2.27,.04,hatchGlow,.14);ring(2.77,.05,hatchGlow,-1.35);ring(2.85,.16,hatchSteel,-2.38);
+ const bolt=new T.CylinderGeometry(.105,.105,.12,8);
+ for(let i=0;i<18;i++){
+  const angle=i/18*Math.PI*2;
+  const mesh=new T.Mesh(bolt,hatchSteel);mesh.rotation.x=Math.PI/2;mesh.position.set(Math.cos(angle)*2.64,Math.sin(angle)*2.64,.245);hatch.add(mesh);
  }
+ const hatchDoors=new T.Group();hatch.add(hatchDoors);
+ const hatchLeaves=[];
+ for(const side of [-1,1]){
+  const panel=new T.Group();
+  const door=new T.Mesh(new T.CircleGeometry(2.24,48,side===1?-Math.PI/2:Math.PI/2,Math.PI),hatchSteel);
+  panel.add(door);hatchLeaves.push(panel);hatchDoors.add(panel);
+  for(const y of [-.95,0,.95]){
+   const rib=new T.Mesh(new T.BoxGeometry(1.63,.095,.1),hatchSteel);
+   rib.position.set(side*.86,y,.05);panel.add(rib);
+  }
+  const latch=new T.Mesh(new T.BoxGeometry(.14,.65,.15),hatchGlow);
+  latch.position.set(side*.18,0,.09);panel.add(latch);
+ }
+ const shaft=new T.Mesh(new T.CircleGeometry(2.64,48),new T.MeshBasicMaterial({color:'#051320',side:T.DoubleSide}));
+ shaft.position.z=-2.85;hatch.add(shaft);
  const cityButton=hud.querySelector('[data-city]');
  const hatchAction=document.createElement('button');
  hatchAction.className='marine-anchor-control';hatchAction.textContent='Take the city lift ↗';hatchAction.hidden=true;hud.append(hatchAction);
@@ -87,8 +108,12 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
   if(reduced){location.assign('./city.html?from=reef');return;}
   const end=hatch.position.clone().add(V(0,-.9,3.5));
   const rotation=new T.Euler().setFromQuaternion(new T.Quaternion().setFromRotationMatrix(new T.Matrix4().lookAt(end,hatch.position,V(0,1,0))),'YXZ');
+  const threshold=hatch.localToWorld(V(0,0,.44));
   glide=gsap.timeline().to(pos,{x:end.x,y:end.y,z:end.z,duration:.74,ease:'power2.inOut'},0)
    .to(look,{x:rotation.x,y:rotation.y,duration:.64,ease:'power2.inOut'},0)
+   .to(hatchLeaves[0].position,{x:-2.25,duration:.45,ease:'power2.inOut'},.56)
+   .to(hatchLeaves[1].position,{x:2.25,duration:.45,ease:'power2.inOut'},.56)
+   .to(pos,{x:threshold.x,y:threshold.y,z:threshold.z,duration:.55,ease:'power2.in'},.8)
    .call(()=>{
     const veil=document.createElement('div');veil.className='reef-city-lock';veil.setAttribute('aria-hidden','true');document.body.append(veil);
     veil.addEventListener('animationend',()=>location.assign('./city.html?from=reef'),{once:true});
@@ -98,7 +123,7 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
  listen('pageshow',event=>{
   if(!event.persisted)return;
   document.querySelector('.reef-city-lock')?.remove();
-  cityButton.disabled=hatchAction.disabled=false;interrupt();
+  cityButton.disabled=hatchAction.disabled=false;hatchLeaves.forEach(panel=>panel.position.x=0);interrupt();
  });
  const anchorGroup=new T.Group();anchorGroup.position.set(0,2.65,-21);scene.add(anchorGroup);
  const anchorMetal=new T.MeshStandardMaterial({color:'#546e87',roughness:.46,metalness:.55,emissive:'#1b3757',emissiveIntensity:.45});
@@ -215,7 +240,7 @@ export function createMarineWorld(T,camera,onReturn,{preview=false,onReefCue}={}
  hud.querySelectorAll('[data-zoom]').forEach(b=>b.onclick=()=>zoom(b.dataset.zoom==='in'?-8:8));
  listen('wheel',e=>{if(!active||e.target.closest?.('.marine-card,.marine-map'))return;e.preventDefault();if(e.ctrlKey||e.metaKey){zoom(e.deltaY*.065);return;}interrupt();const factor=e.deltaMode===1?16:e.deltaMode===2?innerHeight:1;wheelCurrent.add(V(e.deltaX*factor*.029,0,-e.deltaY*factor*.029).applyEuler(look)).clampLength(0,16);},{passive:false});
  const direction=V(),screen=V(),ray=new T.Raycaster(),hit=new T.Vector3();
- return {scene,dispose(){lifetime.abort();glide?.kill();creature.dispose();hud.remove();disposeScene(scene);},unlockedSkills:creature.unlockedSkills,restoreSkills:creature.restoreSkills,enter(preserve=false){active=true;jawOpen=false;inCueRange.fill(false);targetFov=66;hud.hidden=false;document.body.classList.add('in-marine');if(preserve){pos.copy(camera.position);look.setFromQuaternion(camera.quaternion,'YXZ');look.z=0;}else{pos.set(0,2.8,8);look.set(0,0,0);}near=-1;interacted=false;intro.hidden=false;setMap(false);closeCard();clearMovement();document.activeElement?.blur();},leave(){active=false;cityButton.disabled=hatchAction.disabled=false;glide?.kill();document.querySelector('.reef-city-lock')?.remove();hud.hidden=true;document.body.classList.remove('in-marine');creature.cursor(null);interrupt();clearMovement();closeCard();setMap(false);},tick(dt,t){
+ return {scene,dispose(){lifetime.abort();glide?.kill();creature.dispose();hud.remove();disposeScene(scene);},unlockedSkills:creature.unlockedSkills,restoreSkills:creature.restoreSkills,enter(preserve=false){active=true;jawOpen=false;inCueRange.fill(false);targetFov=66;hud.hidden=false;document.body.classList.add('in-marine');if(preserve){pos.copy(camera.position);look.setFromQuaternion(camera.quaternion,'YXZ');look.z=0;}else{pos.set(0,2.8,8);look.set(0,0,0);}near=-1;interacted=false;intro.hidden=false;setMap(false);closeCard();clearMovement();document.activeElement?.blur();},leave(){active=false;cityButton.disabled=hatchAction.disabled=false;hatchLeaves.forEach(panel=>panel.position.x=0);glide?.kill();document.querySelector('.reef-city-lock')?.remove();hud.hidden=true;document.body.classList.remove('in-marine');creature.cursor(null);interrupt();clearMovement();closeCard();setMap(false);},tick(dt,t){
  const jaw=animateReef(dt,t);
  direction.set(Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft')),Number(keys.has('Space'))-Number(keys.has('KeyC')),Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp')));
  direction.x+=axisInput.x;direction.z+=axisInput.y;if(direction.length()>1)direction.normalize();direction.multiplyScalar(7).applyEuler(look);velocity.lerp(direction,1-Math.exp(-dt*6));if(!glide)pos.addScaledVector(velocity,dt).addScaledVector(wheelCurrent,dt);wheelCurrent.multiplyScalar(Math.exp(-dt*5.5));pos.clamp(V(-31,-2.6,-44),V(31,12,23));

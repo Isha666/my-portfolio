@@ -1,8 +1,7 @@
-import {createCityScene,towerDistance,driveLength} from './city-scene.js?v=3';
+import {createCityScene,towerDistance,driveLength} from './city-scene.js?v=cinematic-2';
 
 const canvas=document.querySelector('#cityView');
 const tower=document.querySelector('#tower');
-const lift=document.querySelector('#pressureLift');
 const enter=document.querySelector('#enterTower');
 const hint=document.querySelector('#driveHint');
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -18,14 +17,8 @@ const floors=[
 let city;
 try{city=createCityScene(canvas);}catch(error){console.warn('City WebGL unavailable',error);document.body.classList.add('city-fallback');}
 let distance=city?0:towerDistance,approach=0,previous=0,enterStart=null,throttle=0,swipeY=null;
-let arriving=fromReef&&!reduced&&!!city;
-if(arriving){
- lift.hidden=false;document.body.classList.add('city-arriving');
- lift.addEventListener('animationend',event=>{
-  if(event.target!==lift)return;
-  arriving=false;lift.hidden=true;document.body.classList.remove('city-arriving');
- });
-}
+let arriving=fromReef&&!reduced&&!!city,ascentTime=0;
+if(arriving)document.body.classList.add('city-arriving');
 function drive(delta){
  if(arriving||tower.open||enterStart!==null)return;
  distance=Math.max(0,Math.min(driveLength,distance+delta));
@@ -175,7 +168,11 @@ function frame(now){
   approach=t*t*(3-2*t);
   if(t===1)openTower();
  }
- city.render(distance,reduced?0:dt,approach);
+ if(arriving)ascentTime+=dt;
+ const driving=city.render(distance,reduced?0:dt,approach,arriving?ascentTime:null);
+ if(arriving&&driving){
+  arriving=false;document.body.classList.remove('city-arriving');
+ }
 }
 addEventListener('resize',()=>city?.resize());
 addEventListener('pagehide',event=>{
