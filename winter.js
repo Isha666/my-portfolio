@@ -7,7 +7,7 @@ import * as THREE from './vendor/three.module.js';
 import {createSnowmanHome} from './snowman-home.js?v=screen-buffers-1';
 import {createGardenCrossing} from './garden-crossing.js?v=crossing-lifetime-1';
 import {playSnowSquall} from './snow-squall.js?v=2';
-import {createMarineVortex} from './marine-vortex.js?v=direct-reef-1';
+import {createMarineVortex} from './marine-vortex.js?v=original-landing-1';
 import {createAboutStop} from './about-stop.js?v=igloo-memory-1';
 let aboutStop=null,seasonPortal=null,winterApproach=0;
 const requestedSection=new URLSearchParams(location.search).get('section');
@@ -306,7 +306,7 @@ function leaveDirectReef(){
   dive.reef.leave();
   dive.reef.dispose();
  }
- if(dive.vortex)disposeScene(dive.vortex.scene);
+ if(dive.vortex&&dive.vortex.scene!==dive.reef?.scene)disposeScene(dive.vortex.scene);
  renderer.renderLists.dispose();
  document.body.classList.remove('marine-diving','direct-reef');
  document.body.style.overflow='';
@@ -327,7 +327,7 @@ function openSkills(){
  const scene=new THREE.Scene();
  scene.background=new THREE.Color('#020b29');
  const vortex=reduced?null:createMarineVortex(THREE,camera,scene);
- const dive={scene,vortex,reef:null,ready:false,entered:false,progress:0,updateSurface:null};
+ const dive={scene,vortex,reef:null,ready:false,entered:false,progress:0,lastDiveFrame:0};
  directDive=dive;
  canvas.setAttribute('aria-label','A whirlpool descent into the underwater skills reef');
  document.body.classList.add('marine-diving','direct-reef');
@@ -347,7 +347,12 @@ function openSkills(){
    });
    dive.reef.restoreSkills(reefProgress.skills);
    await renderer.compileAsync(dive.reef.scene,camera).catch(()=>{});
-   if(directDive===dive)dive.ready=true;
+   if(directDive===dive){
+    // The original descent renders the reef behind the fading water funnel.
+    if(dive.vortex)dive.reef.scene.add(...dive.scene.children);
+    dive.scene=dive.reef.scene;
+    dive.ready=true;
+   }
   }catch(error){
    if(directDive!==dive)return;
    leaveDirectReef();
@@ -360,25 +365,26 @@ function openSkills(){
 }
 function renderDirectReef(dt,raw){
  const dive=directDive;
- if(dive.vortex&&dive.progress<1)dive.progress=dive.vortex.tick(Math.min(raw,.12));
- if(!dive.entered&&dive.ready&&(!dive.vortex||dive.progress>=1)){
-  if(dive.vortex){
-   dive.updateSurface=dive.vortex.transferSurface(dive.reef.scene);
-   disposeScene(dive.scene);
-   dive.vortex=null;
-   renderer.renderLists.dispose();
-  }
-  dive.reef.enter(!reduced);
-  dive.entered=true;
-  document.body.classList.remove('marine-diving');
- }
  if(dive.entered){
-  dive.updateSurface?.(time);
+  dive.vortex?.settle(time);
   dive.reef.tick(dt,time);
-  renderer.render(dive.reef.scene,camera);
  }else{
-  renderer.render(dive.scene,camera);
+  // Match the original reef update, vortex camera update, and landing order.
+  if(dive.ready)dive.reef.tick(dt,time);
+  if(dive.vortex&&dive.progress<1){
+   const now=performance.now();
+   const step=dive.lastDiveFrame?Math.min(.25,(now-dive.lastDiveFrame)/1000):dt;
+   dive.lastDiveFrame=now;
+   dive.progress=dive.vortex.tick(step);
+  }
+  if(dive.ready&&(!dive.vortex||dive.progress>=1)){
+   dive.reef.enter(!reduced);
+   dive.vortex?.settle(time);
+   dive.entered=true;
+   document.body.classList.remove('marine-diving');
+  }
  }
+ renderer.render(dive.scene,camera);
  updateCurrentView();
 }
 function enterWinter(button){

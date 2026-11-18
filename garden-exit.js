@@ -35,7 +35,7 @@ export function createGardenExit(THREE,garden,camera,renderer,onWhirlpool,onReef
  let marine,vortex,reefRequest,reefModules,requestGeneration=0;
  function importReef(){
   return reefModules??=Promise.all([
-   import('./marine-world.js?v=hatch-entry-1'),import('./marine-vortex.js?v=direct-reef-1')
+   import('./marine-world.js?v=hatch-entry-1'),import('./marine-vortex.js?v=original-landing-1')
   ]).catch(error=>{reefModules=null;throw error;});
  }
  function prepare(){
