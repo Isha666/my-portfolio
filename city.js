@@ -14,7 +14,7 @@ const floors=[
  {org:'IEEE Computer Society',role:'Editorial Head',story:'Leading editorial work for the Computer Society.',visual:'draft',steps:['DRAFT','EDIT','PUBLISH']},
  {org:'IEEE Student Branch',role:'Public Relations & Editorial Head',story:'Leading public relations and editorial work for the student branch.',visual:'press',steps:['HEADLINE','LAYOUT','PRINT']},
  {org:'SSN ACM-W Student Chapter',role:'Joint Secretary',story:'Supporting the chapter and its initiatives as Joint Secretary.',visual:'constellation',steps:['PEOPLE','EVENTS','INITIATIVES']},
- {org:'SSN Coding Club',role:'Full Stack Deputy Head',story:'I built the SSN Coding Club website. The team was impressed by the result and appointed me Full Stack Deputy Head.',visual:'website',steps:['WIREFRAME','BUILD','LAUNCH']}
+ {org:'SSN Coding Club',role:'Full Stack Deputy Head',story:'Built the frontend for the website.',visual:'website',steps:['WIREFRAME','BUILD','LAUNCH']}
 ];
 let city;
 try{city=createCityScene(canvas);}catch(error){console.warn('City WebGL unavailable',error);document.body.classList.add('city-fallback');}
