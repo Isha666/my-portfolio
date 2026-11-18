@@ -251,8 +251,8 @@ export function mountCity(root,{hatchTraversed=false}={}){
   }
  }
  listen('resize',()=>city?.resize());
- let frameId=requestAnimationFrame(frame);
- return ()=>{
+ let frameId;
+ function dispose(){
   lifetime.abort();
   cancelAnimationFrame(frameId);
   clearTimeout(elevatorTimer);
@@ -261,5 +261,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
   if(tower.open)tower.close();
   audio?.close();
   city?.dispose();
- };
+ }
+ try{frame(performance.now());}catch(error){dispose();throw error;}
+ return dispose;
 }

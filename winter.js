@@ -19,6 +19,8 @@ const restoredWorld=[0,1,2].includes(restoredView?.world)?restoredView.world:0;
 history.scrollRestoration='manual';
 window.scrollTo({top:0,behavior:'instant'});
 let pendingSection=null,lastViewKey=null,cityView=null,disposeCity=null;
+const restoringLeadership=restoredSection==='leadership';
+const initialCover=document.querySelector('#loading');
 const sectionButtons=[...document.querySelectorAll('[data-section]')];
 function updateCurrentView(){
  const section=pendingSection??(cityView?'leadership':snowmanHome.active?'home':seasonPortal.section);
@@ -322,7 +324,7 @@ async function openLeadership({hatchTraversed=false}={}){
  portalStatus.textContent='Preparing the water elevator…';
  portalStatus.hidden=false;
  try{
-  const {mountCity}=await import('./city.js?v=chase-clearance-1');
+  const {mountCity}=await import('./city.js?v=leadership-refresh-1');
   if(generation!==portalGeneration)return;
   close();
   aboutStop.resetJourney();
@@ -386,7 +388,7 @@ document.querySelector('header .brand').onclick=e=>{e.preventDefault();quickHome
   target=clamp(target+delta/range,0,1);
   window.scrollTo({top:target*range,behavior:'instant'});
  }
-function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden){rideTouch=null;return;}if(cityView){updateCurrentView();return;}advanceHeldRide(dt);if(!paused)time+=dt;const roomScene=aboutStop.interiorScene;
+function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden){rideTouch=null;return;}if(cityView||restoringLeadership&&pendingSection==='leadership'&&initialCover.isConnected){updateCurrentView();return;}advanceHeldRide(dt);if(!paused)time+=dt;const roomScene=aboutStop.interiorScene;
  if(!snowmanHome.active&&!roomScene&&!seasonPortal.active){
   if(!aboutStop.active&&!aboutStop.complete&&current>.09)aboutStop.warm(renderer);
   if(!aboutStop.active&&aboutStop.complete&&current>=aboutStop.gate)seasonPortal.prefetch();
@@ -436,5 +438,18 @@ function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=
  moon.position.set(p.x-65,85,p.z+35);moon.target.position.set(p.x,0,p.z-30);moon.target.updateMatrixWorld();if(!aboutStop.active&&(shadowAt<0||!aboutStop.complete&&Math.abs(d-shadowAt)>27)){renderer.shadowMap.needsUpdate=true;shadowAt=d;}const lampCenter=clamp(Math.round((d+3)/14),2,lamps.length-3);
  for(let i=0;i<lamps.length;i++)lamps[i].light.visible=Math.abs(i-lampCenter)<=2;for(const field of snowFields){field.points.position.set(p.x,0,p.z);if(!paused){const a=field.points.geometry.attributes.position.array;for(let i=0;i<field.speeds.length;i++){a[i*3]+=dt*(.35+Math.sin(time*.35+i)*.2);a[i*3+1]-=dt*field.speeds[i];if(a[i*3+1]<-.3){a[i*3+1]=18;a[i*3]=rand(-30,30)}if(a[i*3]>32)a[i*3]=-32;}field.points.geometry.attributes.position.needsUpdate=true;}}
  trailAuroraTime.value=reduced?0:time;waterUniforms.time.value=time;setZone(current<.31?0:current<.69?1:2);document.body.classList.toggle('walking',current>.035);if(onTrail)aboutStop.check(current,current);if(!seasonPortal?.active)aboutStop.tick(dt,time,Math.min(raw,.075));if(onTrail)seasonPortal.check(current);seasonPortal?.tick(dt,time,Math.min(raw,.12));if(seasonPortal?.hideTeam){team.visible=false;sled.visible=false;}else if(!aboutStop.active){team.visible=true;sled.visible=true;}for(const field of snowFields)field.points.visible=!aboutStop.active&&!seasonPortal?.hideTeam;updateCurrentView();if(seasonPortal.scene)seasonPortal.renderDestination(seasonPortal.scene);else renderer.render(aboutStop.interiorScene||scene,camera);if(!seasonPortal?.renderCrossing(gardenEntrance))gardenEntrance?.render(renderer);frames++;elapsed+=raw;if(frames%90===0)document.body.dataset.performance=JSON.stringify({fps:Math.round(frames/elapsed),draws:renderer.info.render.calls,triangles:renderer.info.render.triangles,progress:current});}
-if(restoredSection&&restoredSection!=='about')portfolioDestinations[restoredSection].arrive(sectionButtons.find(button=>button.dataset.section===restoredSection));
-animate();addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();scrollUpdate()});gsap.to('#loading',{opacity:0,duration:.22,onComplete:()=>{document.querySelector('#loading').remove();document.body.setAttribute('data-portfolio-ready','');dispatchEvent(new Event('portfolio-ready'));}});
+function revealPortfolio(){
+ gsap.to(initialCover,{opacity:0,duration:reduced?0:.22,onComplete:()=>{
+  initialCover.remove();
+  document.body.setAttribute('data-portfolio-ready','');
+  dispatchEvent(new Event('portfolio-ready'));
+ }});
+}
+if(restoringLeadership)initialCover.querySelector('.read-while-loading').hidden=true;
+const arrival=restoredSection&&restoredSection!=='about'
+ ? portfolioDestinations[restoredSection].arrive()
+ : null;
+animate();
+addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();scrollUpdate()});
+if(restoringLeadership)arrival.finally(revealPortfolio);
+else revealPortfolio();
