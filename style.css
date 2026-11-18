@@ -456,3 +456,26 @@ header {background:rgb(0 0 0 / 16%);border-bottom:0;text-shadow:0 1px 4px #0d1e2
 .reef-city-lock{position:fixed;inset:0;z-index:200;pointer-events:auto;background:radial-gradient(ellipse,#183c4d,#0c2134 50%,#091225);animation:reef-city-iris .22s ease-in both}
 @keyframes reef-city-iris{from{opacity:0;clip-path:circle(5%)}to{opacity:1;clip-path:circle(85%)}}
 @media(max-width:600px){.marine-top{flex-wrap:wrap}.marine-top [data-city]{white-space:nowrap}}
+
+header nav .leadership-nav {
+ align-self: stretch;
+ display: grid;
+ place-items: center;
+ padding: 12px 0;
+ font-size: 11px;
+ line-height: 1.15;
+ text-align: center;
+ color: inherit;
+ text-decoration: none;
+}
+header nav .leadership-nav:hover {
+ text-decoration: underline;
+ text-underline-offset: 4px;
+}
+@media (max-width: 600px) {
+ header nav .leadership-nav {
+  max-width: 78px;
+  padding: 6px 0;
+  font-size: 10px;
+ }
+}
