@@ -1,5 +1,5 @@
 // Bump the cache version whenever the offline bundle changes.
-const cacheName='portfolio-offline-v16';
+const cacheName='portfolio-offline-v17';
 const files=[
  './index.html',
  './city.html',
@@ -87,7 +87,9 @@ self.addEventListener('activate',event=>{
 async function serve(request,url){
  const cache=await caches.open(cacheName);
  const response=await cache.match(request.mode==='navigate'&&!localFiles.has(url.pathname)?entry:url.origin+url.pathname);
- if(request.mode==='navigate'||['localhost','127.0.0.1','[::1]'].includes(url.hostname)){
+ // Versioned styles and modules should match the HTML that requested them.
+ const versionedCode=url.searchParams.has('v')&&/\.(css|js)$/.test(url.pathname);
+ if(request.mode==='navigate'||versionedCode||['localhost','127.0.0.1','[::1]'].includes(url.hostname)){
   // Keep local edits and deployed HTML visible while allowing an offline reload.
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),2000);
