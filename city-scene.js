@@ -1,5 +1,6 @@
 import * as T from './vendor/three.module.js';
 import {disposeScene} from './scene-resources.js';
+import {createTraffic,crossings,laneOffsets} from './city-traffic.js';
 import {createPressureLift} from './city-lift.js?v=reef-view-2';
 
 export const towerDistance=85;
@@ -305,11 +306,78 @@ export function createCityScene(canvas){
   }
   for(let i=0;i<9;i++)part(scene,box,amber,x+4.53+i*.47,.19,z,.11,.045,3.72);
  }
+ // The major skyline silhouettes get their own geometry and rigid site transforms.
+ const pearl=standard('#997d96',.29,.61);
+ const cobalt=standard('#1f3955',.30,.58);
+ const fin=new T.CylinderGeometry(1,1,1,8),cap=new T.ConeGeometry(1,1,8);
+ const skylinePoint=new T.Vector3();
+ function site(distance,offset){
+  const root=new T.Group();
+  streetPoint(skylinePoint,distance,offset);
+  root.position.copy(skylinePoint);root.rotation.y=-heading(distance);
+  scene.add(root);return root;
+ }
+ function windowBands(root,positions,h,material){
+  const count=Math.floor(h/1.55)-1,rows=positions.length;
+  const facade=new T.InstancedMesh(box,material,count*rows);
+  const model=new T.Object3D();let index=0;
+  for(let y=1;y<=count;y++)for(const [x,z,sx,sz] of positions){
+   model.position.set(x,y*1.55,z);model.scale.set(sx,.36,sz);model.updateMatrix();
+   facade.setMatrixAt(index++,model.matrix);
+  }
+  root.add(facade);
+ }
+ const crowns=site(111,23);
+ for(const z of [-6.2,6.2]){
+  for(let tier=0;tier<6;tier++){
+   const radius=3.6-tier*.34;
+   part(crowns,fin,tier%2?pearl:cobalt,0,3.7+tier*7.4,z,radius,7.4,radius).rotation.y=Math.PI/8;
+   part(crowns,fin,neon[1],0,7.38+tier*7.4,z,radius*1.01,.11,radius*1.01).rotation.y=Math.PI/8;
+  }
+  part(crowns,cap,pearl,0,46.1,z,1.65,3.4,1.65);
+  part(crowns,box,white,0,49.0,z,.075,3.4,.075);
+  windowBands(crowns,[[-2.8,z,.075,1.62],[0,z+2.8,1.38,.071]],26,neon[3]);
+ }
+ part(crowns,box,pearl,0,25,0,2.7,.32,10);
+ part(crowns,box,cobalt,0,26.2,0,2.48,2.02,9.8);
+ part(crowns,box,neon[1],-1.25,25.48,0,.09,.16,9.85);
+ part(crowns,box,neon[1],-1.25,27.16,0,.09,.14,9.85);
+ const terraces=site(43,25);
+ for(const z of [-11,0,11]){
+  for(let floor=0;floor<11;floor++){
+   const slide=(floor/10)**2*2.4;
+   part(terraces,box,cobalt,slide,floor*2.38+1.19,z,5.7,2.38,7.1);
+   part(terraces,box,pearl,slide,floor*2.38+2.31,z,6.22,.15,7.42);
+   part(terraces,box,neon[1],slide-3.06,floor*2.38+2.39,z,.09,.075,7.33);
+   for(const k of [-2.3,0,2.3])part(terraces,box,neon[3],slide-2.88,floor*2.38+1.18,z+k,.06,.86,1.31);
+  }
+ }
+ part(terraces,ball,pearl,1.8,27.1,0,4.7,1.35,18.5);
+ part(terraces,ball,neon[1],1.8,27.97,0,4.4,.16,17.4);
+ const rooftopBark=standard('#51404a'),rooftopLeaf=standard('#315e51');
+ for(const z of [-11,-6,-1,4,9,14]){
+  part(terraces,box,rooftopBark,1,28.45,z,.12,.78,.12);
+  part(terraces,ball,rooftopLeaf,1,29,z,.73,.62,.69);
+ }
+ const sphereHall=site(69,-21.9);
+ const halo=new T.TorusGeometry(5.15,1.24,14,64);
+ const contour=new T.TorusGeometry(5.23,.034,5,72);
+ part(sphereHall,box,cobalt,0,.62,0,12.2,1.24,8.1);
+ const ring=part(sphereHall,halo,pearl,-.1,7.85,0,1.03,1.28,.89);
+ ring.rotation.set(.10,Math.PI/2,-.24);
+ for(const [depth,color] of [[.93,0],[-.93,1]]){
+  const trim=part(sphereHall,contour,neon[color],depth,7.85,0,1.03,1.28,.86);
+  trim.rotation.copy(ring.rotation);
+ }
+ for(let i=0;i<28;i++){
+  const a=i*Math.PI*2/28;
+  part(sphereHall,ball,neon[i%3],1.10,7.85+Math.sin(a)*6.15,Math.cos(a)*4.94,.082,.15,.18);
+ }
  for(let d=2;d<160;d+=13)for(const side of [-1,1]){
   const hero=side===1&&d===80;
   if(side===-1&&d===54)waterfrontPavilion(49);
-  else building(side*range(14,17),-d,range(6,9),hero?30:d%3?range(7,13):range(17,28),range(7,11),hero?1:Math.floor(range(0,4)),hero,Math.round(d/13)%4);
-  building(side*range(26,49),-d-range(0,19),range(7,13),range(24,52),range(8,13),Math.floor(range(0,4)),Math.round(d/13+side)%4);
+  else if(side!==-1||d!==67)building(side*range(14,17),-d,range(6,9),hero?30:d%3?range(7,13):range(17,28),range(7,11),hero?1:Math.floor(range(0,4)),hero,Math.round(d/13)%4);
+  if(!((side===1&&d>=28&&d<=54)||(side===-1&&d>=54&&d<=80)||(side===1&&d>=106&&d<=119)))building(side*range(26,49),-d-range(0,19),range(7,13),range(24,52),range(8,13),Math.floor(range(0,4)),Math.round(d/13+side)%4);
   const reflection=part(scene,reflectionGeo,wash[hero?1:Math.floor(range(0,4))],side*4.8,.021,-d,3.2,11,1);
   reflection.rotation.x=-Math.PI/2;
  }
@@ -320,7 +388,7 @@ export function createCityScene(canvas){
   part(scene,box,neon[nameIndex],side*11.75,4.85,z,.10,.11,5.52);
   for(let i=0;i<4;i++)part(scene,box,neon[3],side*(11.7+i*.48),.21,z,.11,.03,4.6);
  }
- for(const [d,height] of [[18,7.7],[49,9.4],[82,9.9],[112,8.6]]){
+ for(const [d,height] of [[24,10.4],[49,9.4],[82,9.9],[112,8.6]]){
   const x=0,z=-d,depth=3.6;
   part(scene,box,steel,x,height,z,30,.35,depth);
   part(scene,box,steel,x,height+2.07,z,30,.21,depth);
@@ -344,7 +412,7 @@ export function createCityScene(canvas){
   }
   part(scene,box,amber,x-side*.60,.52,z,.061,.034,1.42);
  }
- for(const d of [19,52,85,117]){
+ for(const d of crossings){
   const x=0;
   for(let i=-6;i<=6;i++)part(scene,box,white,x+i*1.07,.007,-d,.60,.01,1.8);
  }
@@ -352,7 +420,7 @@ export function createCityScene(canvas){
  const neutralSignal=new T.Color('#272d37');
  const signalColors=['#ff354d','#ffc15b','#49ffb0'].map(color=>new T.Color(color));
  const lensGeometry=new T.SphereGeometry(1,12,8);
- for(const distance of [19,52,85,117])for(const side of [-1,1]){
+ for(const distance of crossings)for(const side of [-1,1]){
   const z=-distance;
   part(scene,box,steel,side*7.28,2.54,z,.16,5.05,.15);
   part(scene,box,steel,side*4.89,4.99,z,4.80,.11,.12);
@@ -449,9 +517,10 @@ export function createCityScene(canvas){
  }
  const hero=makeCoupe();scene.add(hero);
  const colors=['#6253a1','#c27062','#355b74','#5da36b','#e1bf74','#92648a'];
- const traffic=Array.from({length:24},(_,i)=>{
+ const trafficFlow=createTraffic(24);
+ const traffic=trafficFlow.cars.map((carState,i)=>{
   const twoWheels=i%5===1;
-  return {model:twoWheels?bike(colors[i%6]):car(colors[i%6],i%3),offset:i*7.8,side:i%2?1:-1,speed:range(3.7,6.6),lane:twoWheels?6.05:4.60};
+  return {model:twoWheels?bike(colors[i%6]):car(colors[i%6],i%3),state:carState};
  });
  const figures=Array.from({length:48},(_,i)=>{
   const group=new T.Group(),coat=standard(['#ae584f','#687baa','#7b527e','#434855'][i%4]);
@@ -467,12 +536,20 @@ export function createCityScene(canvas){
  function resize(){
   const w=innerWidth,h=innerHeight;
   renderer.setPixelRatio(Math.min(devicePixelRatio,1.25,Math.sqrt(1500000/(w*h))));
-  renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.76?65:61;camera.updateProjectionMatrix();
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.76?65:68;camera.updateProjectionMatrix();
  }
  resize();
- return {resize,render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1){
+ function occupiedLanes(lane){
+  return Math.abs(lanePosition-laneOffsets[lane])>.08?[0,1]:[lane];
+ }
+ return {
+  resize,
+  drive(from,to,lane){return trafficFlow.drive(from,to,occupiedLanes(lane));},
+  canChangeLane(distance,lane,previousLane){return occupiedLanes(previousLane).length===1&&trafficFlow.canChange(distance,lane);},
+  render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1){
   time+=dt;
-  const targetLane=lane===0?2.25:5.08;
+  const targetLane=laneOffsets[lane];
+  trafficFlow.tick(dt,{distance,lanes:occupiedLanes(lane)});
   lanePosition=dt?T.MathUtils.damp(lanePosition,targetLane,7,dt):targetLane;
   streetPoint(hero.position,distance,lanePosition,.03);
   hero.rotation.y=-heading(distance)+(targetLane-lanePosition)*.047;
@@ -481,13 +558,14 @@ export function createCityScene(canvas){
    sign.material=billboardMaterials[(index+driveCycle)%billboardMaterials.length];
   }
   for(const signal of signals){
-   const cycle=(time+signal.distance*.09)%14,i=cycle<7?2:cycle<9?1:0;
+   const i=trafficFlow.phase(signal.distance);
    signal.lights.forEach((material,j)=>material.color.copy(j===i?signalColors[j]:neutralSignal));
   }
-  for(const {model,offset,side,speed,lane} of traffic){
-   const d=((offset+side*time*speed)%171+171)%171-10;
-   streetPoint(model.position,d,side*lane,.02);model.rotation.y=-heading(d)+(side===1?0:Math.PI);
-   model.visible=Math.abs(d-distance)<54&&(side<0||Math.abs(d-distance)>3.5||Math.abs(lane-lanePosition)>1.2);
+  for(const {model,state} of traffic){
+   const {distance:d,side,lane}=state;
+   streetPoint(model.position,d,side*laneOffsets[lane],.02);
+   model.rotation.y=-heading(d)+(side===1?0:Math.PI);
+   model.visible=Math.abs(d-distance)<54;
   }
   figures.forEach(({group,legs,arms,offset,side},i)=>{
    const d=(offset+time*(.65+i%3*.1))%158;
@@ -503,7 +581,7 @@ export function createCityScene(canvas){
   const behind=T.MathUtils.lerp(mobile?11:9.4,1.4,approach),angle=heading(distance);
   streetPosition.x-=Math.sin(angle)*behind;streetPosition.z+=Math.cos(angle)*behind;
   const farFromLift=T.MathUtils.smoothstep(distance,0,13);
-  streetPoint(streetLook,distance+lookDistance,T.MathUtils.lerp(lanePosition*.65,stopSide*14.5,approach),T.MathUtils.lerp(mobile?.42:4.1*farFromLift+1.1,2.4,approach));
+  streetPoint(streetLook,distance+lookDistance,T.MathUtils.lerp(lanePosition*.65,stopSide*14.5,approach),T.MathUtils.lerp(mobile?.42:1.65*farFromLift+1.1,2.4,approach));
   if(ascentTime!==null){
    pressureLift??=createPressureLift(camera);
    if(ascentTime<pressureLift.duration){

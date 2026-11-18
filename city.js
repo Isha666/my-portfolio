@@ -1,4 +1,4 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=turning-neon-3';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=skyline-traffic-2';
 
 const canvas=document.querySelector('#cityView');
 const tower=document.querySelector('#tower');
@@ -17,12 +17,16 @@ const floors=[
 let city;
 try{city=createCityScene(canvas);}catch(error){console.warn('City WebGL unavailable',error);document.body.classList.add('city-fallback');}
 let distance=city?0:towerDistance,approach=0,previous=0,enterStart=null,throttle=0,swipeY=null,lane=0,inspecting=false;
+let waitingForTraffic=false;
 let arriving=fromReef&&!reduced&&!!city,ascentTime=0;
 if(arriving)document.body.classList.add('city-arriving');
 function drive(delta){
  if(arriving||tower.open||enterStart!==null)return;
  inspecting=false;
- distance=Math.max(0,Math.min(driveLength,distance+delta));
+ const wanted=Math.max(0,Math.min(driveLength,distance+delta));
+ const next=city?city.drive(distance,wanted,lane):wanted;
+ waitingForTraffic=Math.abs(next-wanted)>.01;
+ distance=next;
  updateDrive();
 }
 function updateDrive(){
@@ -33,11 +37,13 @@ function updateDrive(){
  pavilion.hidden=!atPavilion;
  pavilion.textContent=inspecting?'Return to the road ↗':'Look toward Waterfront Pavilion ↗';
  const destination=near?'Leadership Tower':atPavilion?'Waterfront Pavilion':distance<41?'Right toward Waterfront Pavilion':distance<76?'Left toward Leadership Tower':distance>=driveLength?'End of the waterfront':'Scroll or swipe to drive';
- hint.textContent=destination+' · '+(lane?'Right lane':'Left lane');
+ hint.textContent=(waitingForTraffic?'Waiting for traffic':destination)+' · '+(lane?'Right lane':'Left lane');
 }
 function changeLane(value){
  if(!city||arriving||tower.open||enterStart!==null)return;
- lane=value;inspecting=false;updateDrive();
+ if(value===lane)return;
+ if(!city.canChangeLane(distance,value,lane)){waitingForTraffic=true;updateDrive();return;}
+ lane=value;waitingForTraffic=false;inspecting=false;updateDrive();
 }
 document.querySelector('#laneLeft').onclick=()=>changeLane(0);
 document.querySelector('#laneRight').onclick=()=>changeLane(1);
