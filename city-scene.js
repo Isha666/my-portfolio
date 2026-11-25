@@ -1,17 +1,19 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
-import {createCityAttractions} from './city-attractions.js?v=distant-drones-1';
+import {createCityAttractions} from './city-attractions.js?v=drone-choreography-1';
 import {disposeScene} from './scene-resources.js';
-import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=light-show-1';
+import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=extended-drive-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
 export const towerDistance=85;
-export const driveLength=107;
+export const driveLength=245;
 export const pavilionDistance=49;
 const route=[
  {start:22,length:24,turn:Math.PI/3.1},
  {start:65,length:30,turn:-Math.PI/1.92},
- {start:124,length:28,turn:Math.PI/3.4}
+ {start:124,length:28,turn:Math.PI/3.4},
+ {start:174,length:25,turn:-Math.PI/3.7},
+ {start:220,length:22,turn:Math.PI/4.5}
 ];
 function heading(distance){
  return route.reduce((angle,{start,length,turn})=>angle+turn*T.MathUtils.smoothstep(distance,start,start+length),0);
@@ -272,7 +274,7 @@ export function createCityScene(canvas){
    gl_FragColor=vec4(tint,edge*ripple*.36);
   }
  `}));
- for(let d=-80;d<=236;d+=4){
+ for(let d=-80;d<=272;d+=4){
   const x=0,z=-d;
 
   part(scene,box,amber,x,.004,z,.13,.008,1.55);
@@ -299,6 +301,35 @@ export function createCityScene(canvas){
    x<0&&[2,41,145].includes(-z)||
    x>0&&[-46,93,210].includes(-z)
   );
+  if(Math.abs(x)<22&&(
+   x<0&&[67,132,236].includes(-z)||x>0&&[119,184].includes(-z)
+  )){
+   const tower=new T.Group();
+   streetPoint(tower.position,-z,x);tower.rotation.y=-heading(-z);scene.add(tower);
+   const height=30+(Math.abs(z)%3)*6;
+   const profile=[
+    new T.Vector2(w*.33,0),new T.Vector2(w*.48,height*.22),
+    new T.Vector2(w*.5,height*.49),new T.Vector2(w*.40,height*.76),
+    new T.Vector2(w*.18,height*.95),new T.Vector2(0,height)
+   ];
+   const shell=new T.Mesh(new T.LatheGeometry(profile,24),darkGlass);tower.add(shell);
+   const ribs=new T.CatmullRomCurve3(profile.map(point=>new T.Vector3(point.x,point.y,0)));
+   const ribGeometry=new T.TubeGeometry(ribs,32,.045,5,false);
+   for(let rib=0;rib<12;rib++){
+    const strut=new T.Mesh(ribGeometry,steel);strut.rotation.y=rib/12*Math.PI*2;tower.add(strut);
+   }
+   for(let floor=1;floor<15;floor++){
+    const t=floor/15,radius=ribs.getPoint(t).x;
+    const band=new T.Mesh(new T.TorusGeometry(radius,.045,5,32),neon[palette]);
+    band.position.y=ribs.getPoint(t).y;band.rotation.x=Math.PI/2;tower.add(band);
+   }
+   part(tower,box,slab,0,.5,0,w*1.1,1,depth*1.1);
+   if(style===0&&!hero){
+    const samples=Math.floor(h/1.65)*Math.max(2,Math.floor(w/1.23));
+    for(let i=0;i<samples;i++)random();
+   }
+   return;
+  }
   if(sculpted){
    const side=Math.sign(x),height=Math.max(h,Math.abs(x)<22?29:39);
    const tower=new T.Group();
@@ -514,7 +545,7 @@ export function createCityScene(canvas){
   view.position=view.root.localToWorld(new T.Vector3(...view.position));
   view.look=view.root.localToWorld(new T.Vector3(...view.look));
  }
- for(let d=2;d<160;d+=13)for(const side of [-1,1]){
+ for(let d=2;d<260;d+=13)for(const side of [-1,1]){
   const hero=side===1&&d===80;
   if(side===-1&&d===54)waterfrontPavilion(49);
   else if(!(side===-1&&d===67)&&!(side===1&&[28,41,106].includes(d)))building(side*range(14,17),-d,range(6,9),hero?30:d%3?range(7,13):range(17,28),range(7,11),hero?1:Math.floor(range(0,4)),hero,Math.round(d/13)%4);
@@ -523,7 +554,7 @@ export function createCityScene(canvas){
   reflection.rotation.x=-Math.PI/2;
  }
  // Extend the street frontage behind arrival and past the drive's final turn.
- for(const d of [-72,-59,-46,-33,-20,-7,171,184,197,210,223]){
+ for(const d of [-72,-59,-46,-33,-20,-7]){
   for(const side of [-1,1]){
    building(side*16,-d,8,16+(Math.abs(d)%4)*3,9,(Math.abs(d)+1)%4,false,Math.floor(Math.abs(d)/13)%4);
   }
@@ -540,7 +571,7 @@ export function createCityScene(canvas){
   }
   for(let i=0;i<4;i++)part(scene,box,neon[3],side*(11.7+i*.48),.21,z,.11,.03,4.6);
  }
- for(const [d,height] of [[24,10.4],[49,9.4],[82,9.9],[112,8.6]]){
+ for(const [d,height] of [[24,10.4],[49,9.4],[82,9.9],[112,8.6],[166,11],[211,10.3]]){
   const x=0,z=-d,depth=3.6;
   // The bridge meets a full-height entrance wing on both sides of the street.
   for(const side of [-1,1]){
@@ -600,7 +631,7 @@ export function createCityScene(canvas){
  }
  function ribbon(left,right,y,material){
   const positions=[],triangles=[];
-  for(let d=-90;d<=240;d++){
+  for(let d=-90;d<=280;d++){
    for(const edge of [left,right]){
     streetPoint(mapped,d,edge,y);positions.push(mapped.x,mapped.y,mapped.z);
    }
@@ -710,11 +741,11 @@ export function createCityScene(canvas){
   part(group,ball,standard('#bd8e78'),0,1.51,0,.11,.15,.105);
   const legs=[-1,1].map(side=>part(group,box,coat,side*.084,.39,0,.105,.65,.1));
   const arms=[-1,1].map(side=>part(group,ball,coat,side*.192,.99,0,.054,.23,.055));
-  scene.add(group);return{group,legs,arms,offset:i*3.2,side:i%2?1:-1};
+  scene.add(group);return{group,legs,arms,offset:i*5.2,side:i%2?1:-1};
  });
  addCityBackdrop(scene,streetPoint,heading);
  const attractions=createCityAttractions(scene,streetPoint,heading);
- let time=0,pressureLift;
+ let time=0,droneStart=0,pressureLift;
  const streetPosition=new T.Vector3(),streetLook=new T.Vector3();
  const orbitOffset=new T.Vector3(),lookDirection=new T.Vector3();
  let lanePosition=2.25;
@@ -733,7 +764,8 @@ export function createCityScene(canvas){
   canChangeLane(distance,lane,previousLane){return occupiedLanes(previousLane).length===1&&trafficFlow.canChange(distance,lane);},
   render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false,freeLook=null){
   if(!reduced)time+=dt;
-  attractions.tick(time,distance);
+  if(ascentTime!==null)droneStart=time;
+  attractions.tick(time,time-droneStart);
   ledClock.value=time;ledDistance.value=distance;
   const targetLane=laneOffsets[lane];
   trafficFlow.tick(dt,{distance,lanes:occupiedLanes(lane)});
@@ -742,7 +774,7 @@ export function createCityScene(canvas){
   hero.rotation.y=-heading(distance)+(targetLane-lanePosition)*.047;
   for(const {sign,index,distance:at} of signs){
    const driveCycle=Math.floor((distance-at+180)/6 + time*.45);
-   sign.material=billboardMaterials[(index+driveCycle)%billboardMaterials.length];
+   sign.material=billboardMaterials[((index+driveCycle)%billboardMaterials.length+billboardMaterials.length)%billboardMaterials.length];
   }
   for(const show of lightShows){
    const nearby=1-T.MathUtils.smoothstep(Math.abs(distance-show.distance),5,32);
@@ -763,7 +795,7 @@ export function createCityScene(canvas){
    model.visible=Math.abs(d-distance)<54;
   }
   figures.forEach(({group,legs,arms,offset,side},i)=>{
-   const d=(offset+time*(.65+i%3*.1))%158;
+   const d=(offset+time*(.65+i%3*.1))%265;
    streetPoint(group.position,d,side*(8.65+i%3*.48),.20);
    group.rotation.y=-heading(d)+(side===1?Math.PI:0);
    group.visible=Math.abs(d-distance)<38;
@@ -773,14 +805,14 @@ export function createCityScene(canvas){
   const mobile=camera.aspect<.76;
   // A shorter viewport gives the driving controls a larger share of the frame.
   const shortView=1-T.MathUtils.smoothstep(innerHeight,400,620);
-  const lookDistance=T.MathUtils.lerp(mobile?5.6:13-7.4*shortView,0,approach);
-  streetPoint(streetPosition,distance,T.MathUtils.lerp(lanePosition,stopSide*8,approach),T.MathUtils.lerp(mobile?4.9:5.5,2.15,approach));
-  const behind=T.MathUtils.lerp(mobile?11:9.4,1.4,approach),angle=heading(distance);
+  const lookDistance=T.MathUtils.lerp(mobile?16:20-6*shortView,0,approach);
+  streetPoint(streetPosition,distance,T.MathUtils.lerp(lanePosition,stopSide*8,approach),T.MathUtils.lerp(mobile?6.2:6.8,2.15,approach));
+  const behind=T.MathUtils.lerp(17,1.4,approach),angle=heading(distance);
   streetPosition.x-=Math.sin(angle)*behind;streetPosition.z+=Math.cos(angle)*behind;
   const farFromLift=T.MathUtils.smoothstep(distance,0,13);
-  streetPoint(streetLook,distance+lookDistance,T.MathUtils.lerp(lanePosition*.65,stopSide*14.5,approach),T.MathUtils.lerp((mobile?.42:1.65*farFromLift+1.1)-1.35*shortView,2.4,approach));
+  streetPoint(streetLook,distance+lookDistance,T.MathUtils.lerp(lanePosition*.65,stopSide*14.5,approach),T.MathUtils.lerp((mobile?2:farFromLift+2.2)-1.35*shortView,2.4,approach));
   const mode=ascentTime!==null||approach>.002?'chase':cameraMode;
-  let fov=mobile?65:68;
+  let fov=mobile?74:76;
   camera.layers.set(landmarkViews[mode]?.layer??0);
   if(mode==='hood'){
    streetPoint(streetPosition,distance+1.1,lanePosition,1.35);
@@ -828,7 +860,7 @@ export function createCityScene(canvas){
   if(pressureLift){pressureLift.dispose();pressureLift=null;renderer.renderLists.dispose();}
   hero.visible=mode!=='hood';
   camera.position.copy(streetPosition);camera.lookAt(streetLook);
-  attractions.placeShow(distance,camera);
+  attractions.placeShow(distance,camera,dt);
   renderer.render(scene,camera);
   return true;
  },dispose(){pressureLift?.dispose();disposeScene(scene);for(const material of billboardMaterials){material.map.dispose();material.dispose();}renderer.dispose();renderer.forceContextLoss();}};

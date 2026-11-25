@@ -1,4 +1,4 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=sculpted-skyline-1';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=extended-drive-1';
 
 import {hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
@@ -53,7 +53,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
   pavilion.hidden=!atPavilion;
   const action=inspecting?'Return to the road ↗':'Look toward Waterfront Pavilion ↗';
   if(pavilion.textContent!==action)pavilion.textContent=action;
-  const destination=near?'Leadership Tower':atPavilion?'Waterfront Pavilion':distance<41?'Right toward Waterfront Pavilion':distance<76?'Left toward Leadership Tower':distance>=driveLength?'End of the waterfront':'Scroll or hold ↑ to drive';
+  const destination=near?'Leadership Tower':atPavilion?'Waterfront Pavilion':distance<41?'Right toward Waterfront Pavilion':distance<76?'Left toward Leadership Tower':distance>=driveLength?'End of the city drive':distance>160?'Skyline promenade':distance>105?'Continue toward the landmark district':'Scroll or hold ↑ to drive';
   const status=(waitingForTraffic?'Waiting for traffic':destination)+' · '+(lane?'Right lane':'Left lane');
   if(hint.textContent!==status)hint.textContent=status;
  }

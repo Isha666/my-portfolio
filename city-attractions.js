@@ -68,54 +68,104 @@ export function createCityAttractions(scene,streetPoint,heading){
  geometry.setAttribute('color',new T.BufferAttribute(colors,3).setUsage(T.DynamicDrawUsage));
  const drones=new T.Points(geometry,new T.ShaderMaterial({
   transparent:true,depthTest:false,depthWrite:false,vertexColors:true,blending:T.AdditiveBlending,
-  uniforms:{},
-  vertexShader:'varying vec3 tint;void main(){tint=color;vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(1900./-p.z,2.,7.);}',
+  uniforms:{clock:{value:0}},
+  vertexShader:'uniform float clock;varying vec3 tint;void main(){tint=color*(.9+.1*sin(clock*1.2+position.x));vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(2400./-p.z,2.,6.);}',
   fragmentShader:'varying vec3 tint;void main(){float r=length(gl_PointCoord-.5)*2.;float halo=exp(-r*r*5.);float core=1.-smoothstep(.12,.4,r);gl_FragColor=vec4(tint*(1.+core),halo*.72+core*.28);}'
  }));
  drones.scale.setScalar(7);
- const showPosition=new T.Vector3(),showDirection=new T.Vector3();
+ const showPosition=new T.Vector3(),showDirection=new T.Vector3(),showTarget=new T.Vector3();
+ const showQuaternion=new T.Quaternion(),showAxis=new T.Vector3(0,1,0);
+ let showPlaced=false;
  const showDistance=520;
- function placeShow(distance,camera){
+ function placeShow(distance,camera,dt=.016){
   if(camera)camera.getWorldDirection(showDirection);
   const angle=camera?Math.atan2(showDirection.x,-showDirection.z):heading(distance);
   streetPoint(showPosition,distance,0,78);
   if(camera){showPosition.x=camera.position.x;showPosition.z=camera.position.z;}
-  drones.position.copy(showPosition);
-  drones.position.x+=Math.sin(angle)*showDistance+Math.cos(angle)*45;
-  drones.position.z+=-Math.cos(angle)*showDistance+Math.sin(angle)*45;
-  drones.rotation.y=-angle;
+  showTarget.copy(showPosition);
+  showTarget.x+=Math.sin(angle)*showDistance+Math.cos(angle)*45;
+  showTarget.z+=-Math.cos(angle)*showDistance+Math.sin(angle)*45;
+  showQuaternion.setFromAxisAngle(showAxis,-angle);
   if(camera){
    const pitch=Math.atan2(showDirection.y,Math.hypot(showDirection.x,showDirection.z));
    const skyAngle=Math.atan(.72*Math.tan(T.MathUtils.degToRad(camera.fov)*.5));
-   drones.position.y=camera.position.y+showDistance*Math.tan(pitch+skyAngle);
+   showTarget.y=camera.position.y+showDistance*Math.tan(pitch+skyAngle);
+  }
+  if(!showPlaced){
+   drones.position.copy(showTarget);drones.quaternion.copy(showQuaternion);showPlaced=true;
+  }else{
+   const smoothing=1-Math.exp(-dt*1.4);
+   drones.position.lerp(showTarget,smoothing);
+   drones.quaternion.slerp(showQuaternion,smoothing);
   }
  }
  drones.frustumCulled=false;
  drones.renderOrder=20;
  scene.add(drones);
+ const formations=Array.from({length:5},()=>new Float32Array(targets.length*3));
+ for(let i=0;i<targets.length;i++){
+  const t=i/targets.length,angle=t*Math.PI*2;
+  const [x,y]=targets[i];
+  formations[0].set([x,y,0],i*3);
+  const heartScale=.88+(i%3)*.06;
+  formations[1].set([
+   9*Math.sin(angle)**3*heartScale,
+   (13*Math.cos(angle)-5*Math.cos(2*angle)-2*Math.cos(3*angle)-Math.cos(4*angle))*.56*heartScale,
+   Math.sin(angle*2)*.3
+  ],i*3);
+  if(i%3===0){
+   const latitude=Math.acos(1-2*t),longitude=i*2.399963;
+   formations[2].set([Math.sin(latitude)*Math.cos(longitude)*5.5,Math.cos(latitude)*5.5,Math.sin(latitude)*Math.sin(longitude)*5.5],i*3);
+  }else{
+   const ring=9+(i%5)*.14;
+   formations[2].set([Math.cos(angle)*ring,Math.sin(angle)*ring*.35,Math.sin(angle)*ring*.65],i*3);
+  }
+  const edge=t*10,index=Math.floor(edge),along=edge-index;
+  const startAngle=index*Math.PI/5+Math.PI/2,endAngle=(index+1)*Math.PI/5+Math.PI/2;
+  const r1=index%2?4.1:9.5,r2=index%2?9.5:4.1;
+  formations[3].set([
+   T.MathUtils.lerp(Math.cos(startAngle)*r1,Math.cos(endAngle)*r2,along),
+   T.MathUtils.lerp(Math.sin(startAngle)*r1,Math.sin(endAngle)*r2,along),
+   Math.sin(angle*5)*.4
+  ],i*3);
+  const wing=2.8*Math.exp(Math.cos(angle))-4*Math.cos(4*angle)-Math.sin(angle/12)**5;
+  formations[4].set([Math.sin(angle)*wing*1.35,Math.cos(angle)*wing,Math.abs(Math.sin(angle))*1.2],i*3);
+ }
  const color=new T.Color();
- function tick(time,distance=0){
-  placeShow(distance);
+ const themes=[.56,.94,.61,.11,.77];
+ function tick(time,showTime=time){
   const rotation=time*.11;
   rotor.rotation.z=rotation;
   for(const {cabin,angle} of cabins){
    cabin.position.set(Math.cos(angle+rotation)*radius,centerY+Math.sin(angle+rotation)*radius,0);
    cabin.rotation.z=Math.sin(time*.7+angle)*.025;
   }
-  const cycle=time%24;
-  const formation=T.MathUtils.smoothstep(cycle,0,4)*(1-T.MathUtils.smoothstep(cycle,19,24));
+  // The same drones fly between formations along staggered curved paths.
+  const phase=showTime/9,from=Math.floor(phase)%formations.length,to=(from+1)%formations.length;
+  const stage=phase%1;
+  drones.material.uniforms.clock.value=time;
+  const spin=showTime*.08,cos=Math.cos(spin),sin=Math.sin(spin);
   for(let i=0;i<targets.length;i++){
-   const [x,y]=targets[i],angle=i*2.399963;
-   const spread=1-formation;
-   positions[i*3]=x+spread*Math.sin(angle+time*.14)*(6+i%11);
-   positions[i*3+1]=y+spread*Math.cos(angle+time*.12)*(3+i%7)+Math.sin(time*1.2+i)*.025;
-   positions[i*3+2]=spread*Math.sin(angle*1.7+time*.2)*5;
-   color.setHSL((x*.013+time*.035+1)%1,.84,.68);
-   colors.set([color.r,color.g,color.b],i*3);
+   const stagger=(Math.sin(i*3.71)*.5+.5)*.07;
+   const progress=T.MathUtils.smoothstep(stage,.46+stagger,.91+stagger);
+   const arc=Math.sin(progress*Math.PI);
+   const angle=i*2.399963;
+   const a=formations[from],b=formations[to],at=i*3;
+   const ax=from===2?a[at]*cos-a[at+2]*sin:a[at];
+   const az=from===2?a[at]*sin+a[at+2]*cos:a[at+2];
+   const bx=to===2?b[at]*cos-b[at+2]*sin:b[at];
+   const bz=to===2?b[at]*sin+b[at+2]*cos:b[at+2];
+   positions[at]=T.MathUtils.lerp(ax,bx,progress)+Math.cos(angle)*arc*2;
+   positions[at+1]=T.MathUtils.lerp(a[at+1],b[at+1],progress)+Math.sin(angle)*arc*1.4;
+   positions[at+2]=T.MathUtils.lerp(az,bz,progress)+Math.sin(angle*1.7)*arc*3;
+   const hue=T.MathUtils.lerp(themes[from],themes[to],progress);
+   color.setHSL((hue+i/targets.length*.13+showTime*.006)%1,.83,.69);
+   colors.set([color.r,color.g,color.b],at);
   }
   geometry.attributes.position.needsUpdate=true;
   geometry.attributes.color.needsUpdate=true;
  }
- tick(6);
+ placeShow(0);
+ tick(0);
  return {tick,placeShow};
 }

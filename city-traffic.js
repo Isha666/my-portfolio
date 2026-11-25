@@ -1,6 +1,6 @@
-export const crossings=[19,52,85,117];
+export const crossings=[19,52,85,117,163,218];
 export const laneOffsets=[2.25,5.08];
-const start=-15,end=169,gap=5.7;
+const start=-15,end=278,gap=5.7;
 
 export function signalPhase(distance,time){
  const phase=(time+distance*.09)%14;
