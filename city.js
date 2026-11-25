@@ -1,4 +1,4 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=separated-drone-stages-2';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=bridge-crowds-1';
 
 import {hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 

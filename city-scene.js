@@ -739,13 +739,13 @@ export function createCityScene(canvas){
   const twoWheels=i%5===1;
   return {model:twoWheels?bike(colors[i%6]):car(colors[i%6],i%3),state:carState};
  });
- const figures=Array.from({length:48+skybridges.length},(_,i)=>{
+ const figures=Array.from({length:48+skybridges.length*5},(_,i)=>{
   const group=new T.Group(),coat=standard(['#ae584f','#687baa','#7b527e','#434855'][i%4]);
   part(group,ball,coat,0,1.06,0,.19,.32,.13);
   part(group,ball,standard('#bd8e78'),0,1.51,0,.11,.15,.105);
   const legs=[-1,1].map(side=>part(group,box,coat,side*.084,.39,0,.105,.65,.1));
   const arms=[-1,1].map(side=>part(group,ball,coat,side*.192,.99,0,.054,.23,.055));
-  scene.add(group);return{group,legs,arms,offset:i*5.2,side:i%2?1:-1,bridge:i>=48?skybridges[i-48]:null};
+  scene.add(group);return{group,legs,arms,offset:i*5.2,side:i%2?1:-1,bridge:i>=48?skybridges[Math.floor((i-48)/5)]:null,bridgeSlot:(i-48)%5};
  });
  addCityBackdrop(scene,streetPoint,heading);
  const attractions=createCityAttractions(scene,streetPoint,heading);
@@ -799,11 +799,11 @@ export function createCityScene(canvas){
    model.rotation.y=-heading(d)+(side===1?0:Math.PI);
    model.visible=Math.abs(d-distance)<54;
   }
-  figures.forEach(({group,legs,arms,offset,side,bridge},i)=>{
+  figures.forEach(({group,legs,arms,offset,side,bridge,bridgeSlot},i)=>{
    const d=bridge?bridge[0]:(offset+time*(.65+i%3*.1))%265;
    if(bridge){
-    const cycle=(time*.5+offset)%56,across=cycle<28?cycle:56-cycle;
-    streetPoint(group.position,d,-14+across,bridge[1]+.2);
+    const cycle=(time*(.52+bridgeSlot*.065)+bridgeSlot*11.2+d*.13)%56,across=cycle<28?cycle:56-cycle;
+    streetPoint(group.position,d+(cycle<28?-.62:.62),-14+across,bridge[1]+.2);
     group.rotation.y=-heading(d)+(cycle<28?Math.PI/2:-Math.PI/2);
     group.visible=Math.abs(d-distance)<85;
    }else{
