@@ -1,7 +1,7 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
 import {createCityAttractions} from './city-attractions.js?v=fixed-drone-stage-2';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=mixed-finishes-1';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=pearl-and-uplights-1';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=extended-drive-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
@@ -173,7 +173,7 @@ export function createCityScene(canvas){
   [new T.Color('#d7bd8a'),new T.Color('#aebbc9')],
   [new T.Color('#3e8eff'),new T.Color('#f15eac')],
   [new T.Color('#58cfee'),new T.Color('#ef77cb')],
-  [new T.Color('#4389ff'),new T.Color('#995eff')],
+  [new T.Color('#995eff'),new T.Color('#ffe16a')],
   [new T.Color('#c38e86'),new T.Color('#d9d3e7')]
  ];
  function finishForDistance(distance){
@@ -334,7 +334,7 @@ export function createCityScene(canvas){
    const side=Math.sign(x),height=Math.max(h,Math.abs(x)<22?29:39);
    const tower=new T.Group();
    streetPoint(tower.position,-z,x,0);tower.rotation.y=-heading(-z);scene.add(tower);
-   tower.userData.facadeFinish=finishForDistance(-z);
+   tower.userData.facadeFinish=-z===41?4:finishForDistance(-z);
    const animated=[-46,41,145].includes(-z);
    const facade=animated?towerGradient((Math.abs(x)*.13-z*.047)%7,tower.userData.facadeFinish):darkGlass;
    if(side<0){

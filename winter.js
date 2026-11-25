@@ -428,7 +428,7 @@ async function openLeadership({hatchTraversed=false}={}){
  portalStatus.textContent='Preparing the water elevator…';
  portalStatus.hidden=false;
  try{
-  const {mountCity}=await import('./city.js?v=mixed-finishes-1');
+  const {mountCity}=await import('./city.js?v=pearl-and-uplights-1');
   if(generation!==portalGeneration)return;
   close();
   aboutStop.resetJourney();
