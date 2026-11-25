@@ -1,7 +1,7 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
 import {createCityAttractions} from './city-attractions.js?v=fixed-drone-stage-2';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=facade-finishes-1';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=mixed-finishes-1';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=extended-drive-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
@@ -171,11 +171,24 @@ export function createCityScene(canvas){
  const lightShows=[];
  const trimPalette=[
   [new T.Color('#d7bd8a'),new T.Color('#aebbc9')],
-  [new T.Color('#3e8eff'),new T.Color('#f15eac')]
+  [new T.Color('#3e8eff'),new T.Color('#f15eac')],
+  [new T.Color('#58cfee'),new T.Color('#ef77cb')],
+  [new T.Color('#4389ff'),new T.Color('#995eff')],
+  [new T.Color('#c38e86'),new T.Color('#d9d3e7')]
  ];
- function facadeLights(distance,offset){
+ function finishForDistance(distance){
+  if(distance<0)return 4;
+  if(distance<25)return 2;
+  if(distance<65)return 1;
+  if(distance<100)return 3;
+  if(distance<140)return 2;
+  if(distance<185)return 4;
+  if(distance<220)return 0;
+  return 3;
+ }
+ function facadeLights(distance,offset,finish=finishForDistance(distance)){
   const material=lit('#ef76d7');
-  lightShows.push({distance,material,offset});
+  lightShows.push({distance,material,offset,finish});
   return material;
  }
  const litWindows=neon.map(()=>[]),frames=[];
@@ -212,7 +225,7 @@ export function createCityScene(canvas){
   const phase=(Math.sin(++signSerial*71.3+index*19.1)*43758.54)%1;
   const material=new T.ShaderMaterial({
    side:T.DoubleSide,toneMapped:false,
-   uniforms:{atlas:{value:atlas},clock:ledClock,route:ledDistance,phase:{value:Math.abs(phase)},finish:{value:signSerial%2}},
+   uniforms:{atlas:{value:atlas},clock:ledClock,route:ledDistance,phase:{value:Math.abs(phase)},finish:{value:parent.userData.facadeFinish??finishForDistance(-z)}},
    vertexShader:`varying vec2 panel;void main(){panel=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
    fragmentShader:`
     uniform sampler2D atlas;uniform float clock,route,phase,finish;varying vec2 panel;
@@ -230,10 +243,10 @@ export function createCityScene(canvas){
   const sign=part(parent,signGeometry,material,x,y,z,width,height,1);sign.rotation.y=rotation;
   return sign;
  }
- function towerGradient(index){
+ function towerGradient(index,finish=Math.round(Math.abs(index))%5){
   return new T.ShaderMaterial({
    toneMapped:false,
-   uniforms:{clock:ledClock,phase:{value:index*.32},finish:{value:Math.round(Math.abs(index))%2}},
+   uniforms:{clock:ledClock,phase:{value:index*.32},finish:{value:finish}},
    vertexShader:`
     varying vec2 surface;varying vec3 faceNormal;
     void main(){vec4 p=modelMatrix*vec4(position,1.);surface=uv;faceNormal=normal;gl_Position=projectionMatrix*viewMatrix*p;}
@@ -321,8 +334,9 @@ export function createCityScene(canvas){
    const side=Math.sign(x),height=Math.max(h,Math.abs(x)<22?29:39);
    const tower=new T.Group();
    streetPoint(tower.position,-z,x,0);tower.rotation.y=-heading(-z);scene.add(tower);
+   tower.userData.facadeFinish=finishForDistance(-z);
    const animated=[-46,41,145].includes(-z);
-   const facade=animated?towerGradient((Math.abs(x)*.13-z*.047)%7):darkGlass;
+   const facade=animated?towerGradient((Math.abs(x)*.13-z*.047)%7,tower.userData.facadeFinish):darkGlass;
    if(side<0){
     for(let level=0;level<5;level++){
      const taper=1-level*.09;
@@ -467,7 +481,7 @@ export function createCityScene(canvas){
   root.add(facade);
  }
  const crowns=site(104,22);
- const crownColors=facadeLights(104,.10),crownWash=towerGradient(0);
+ const crownColors=facadeLights(104,.10,0),crownWash=towerGradient(0);
  for(const z of [-6.2,6.2]){
   for(let tier=0;tier<6;tier++){
    const radius=3.6-tier*.34;
@@ -495,6 +509,7 @@ export function createCityScene(canvas){
    }
   }
  }
+ terraces.userData.facadeFinish=1;
  tallSign(terraces,1,-3.12,14.15,0,2.30,23,-Math.PI/2);
  part(terraces,ball,pearl,1.8,27.1,0,4.7,1.35,18.5);
  part(terraces,ball,terraceColors,1.8,27.97,0,4.4,.16,17.4);
@@ -765,10 +780,12 @@ export function createCityScene(canvas){
   }
   for(const show of lightShows){
    const nearby=1-T.MathUtils.smoothstep(Math.abs(distance-show.distance),5,32);
-   const palette=trimPalette[show.offset<.25?0:1];
+   const palette=trimPalette[show.finish];
    const speed=.12+show.offset*.11;
    const mix=.5+.5*Math.sin(time*speed+show.distance*.31);
-   show.material.color.copy(palette[0]).lerp(palette[1],mix).multiplyScalar(.84+nearby*.22);
+   if(show.finish===2)show.material.color.setHSL((time*(.045+show.offset*.025)+show.offset)%1,.78,.61);
+   else show.material.color.copy(palette[0]).lerp(palette[1],mix);
+   show.material.color.multiplyScalar(.84+nearby*.22);
   }
   for(const signal of signals){
    const i=trafficFlow.phase(signal.distance);
