@@ -59,25 +59,15 @@ export function createCityAttractions(scene,streetPoint,heading){
  context.fillStyle='#fff';context.fillText('Isha Portfolio',210,35);
  const pixels=context.getImageData(0,0,420,70).data;
  const targets=[];
- for(let y=6;y<65;y+=3)for(let x=5;x<415;x+=3){
+ for(let y=6;y<65;y+=4)for(let x=5;x<415;x+=4){
   if(pixels[(y*420+x)*4+3]>150)targets.push([(x-210)*.065,(35-y)*.065]);
  }
- const positions=new Float32Array(targets.length*3),colors=new Float32Array(targets.length*3);
- const geometry=new T.BufferGeometry();
- geometry.setAttribute('position',new T.BufferAttribute(positions,3).setUsage(T.DynamicDrawUsage));
- geometry.setAttribute('color',new T.BufferAttribute(colors,3).setUsage(T.DynamicDrawUsage));
- const drones=new T.Points(geometry,new T.ShaderMaterial({
+ const droneMaterial=new T.ShaderMaterial({
   transparent:true,depthTest:true,depthWrite:false,vertexColors:true,blending:T.AdditiveBlending,
   uniforms:{},
-  vertexShader:'varying vec3 tint;void main(){tint=color;vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(2800./-p.z,1.,3.5);}',
+  vertexShader:'varying vec3 tint;void main(){tint=color;vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(850./-p.z,1.4,3.2);}',
   fragmentShader:'varying vec3 tint;void main(){float r=length(gl_PointCoord-.5)*2.;float halo=exp(-r*r*5.);float core=1.-smoothstep(.12,.4,r);gl_FragColor=vec4(tint*(1.+core),halo*.72+core*.28);}'
- }));
- // One fixed aerial stage above the distant skyline, facing the main boulevard.
- drones.position.set(100,420,-1600);
- drones.rotation.y=-.06;
- drones.scale.setScalar(14);
- drones.frustumCulled=false;
- scene.add(drones);
+ });
  const formations=Array.from({length:5},()=>new Float32Array(targets.length*3));
  for(let i=0;i<targets.length;i++){
   const t=i/targets.length,angle=t*Math.PI*2;
@@ -107,14 +97,12 @@ export function createCityAttractions(scene,streetPoint,heading){
   const wing=2.8*Math.exp(Math.cos(angle))-4*Math.cos(4*angle)-Math.sin(angle/12)**5;
   formations[4].set([Math.sin(angle)*wing*1.35,Math.cos(angle)*wing,Math.abs(Math.sin(angle))*1.2],i*3);
  }
- // Assign each departure light a nearby destination rather than crossing the whole stage.
- const transitions=formations.map((source,index)=>{
-  const destination=formations[(index+1)%formations.length];
-  const assigned=new Float32Array(destination.length);
-  const used=new Uint8Array(targets.length);
+ // Preserve each aircraft's identity across every formation, including the loop.
+ function assignDestinations(source,destination){
+  const assigned=new Float32Array(destination.length),used=new Uint8Array(targets.length);
   for(let i=0;i<targets.length;i++){
    const at=i*3;
-   let nearest=-1,best=Infinity;
+   let nearest=0,best=Infinity;
    for(let candidate=0;candidate<targets.length;candidate++){
     if(used[candidate])continue;
     const next=candidate*3;
@@ -126,6 +114,30 @@ export function createCityAttractions(scene,streetPoint,heading){
    assigned.set(destination.subarray(nearest*3,nearest*3+3),at);
   }
   return assigned;
+ }
+ // Four real world locations. Nothing follows the camera or drops toward the car.
+ const shows=[
+  {distance:62,lane:-68,height:94,offset:0},
+  {distance:132,lane:72,height:108,offset:8},
+  {distance:202,lane:-74,height:98,offset:16},
+  {distance:285,lane:65,height:112,offset:24}
+ ].map((site,index)=>{
+  const positions=new Float32Array(formations[index].length),colors=new Float32Array(positions.length);
+  const geometry=new T.BufferGeometry();
+  geometry.setAttribute('position',new T.BufferAttribute(positions,3).setUsage(T.DynamicDrawUsage));
+  geometry.setAttribute('color',new T.BufferAttribute(colors,3).setUsage(T.DynamicDrawUsage));
+  const drones=new T.Points(geometry,droneMaterial);
+  streetPoint(drones.position,site.distance,site.lane,site.height);
+  const bearing=heading(Math.max(0,site.distance-45));
+  drones.position.x+=Math.sin(bearing)*190;
+  drones.position.z-=Math.cos(bearing)*190;
+  drones.rotation.y=-bearing;
+  drones.scale.setScalar(6);
+  // Dynamic point positions need a fixed bounding sphere covering the entire show.
+  geometry.boundingSphere=new T.Sphere(new T.Vector3(),15);
+  scene.add(drones);
+  return {...site,index,positions,colors,geometry,phase:-1,
+   source:formations[index].slice(),destination:formations[index].slice()};
  });
  const color=new T.Color();
  const themes=[.56,.94,.61,.11,.77];
@@ -136,25 +148,34 @@ export function createCityAttractions(scene,streetPoint,heading){
    cabin.position.set(Math.cos(angle+rotation)*radius,centerY+Math.sin(angle+rotation)*radius,0);
    cabin.rotation.z=Math.sin(time*.7+angle)*.025;
   }
-  // The same drones fly between formations along staggered curved paths.
-  const phase=showTime/14,from=Math.floor(phase)%formations.length,to=(from+1)%formations.length;
-  const stage=phase%1;
-
-  for(let i=0;i<targets.length;i++){
-   const stagger=(Math.sin(i*3.71)*.5+.5)*.07;
-   const progress=T.MathUtils.smoothstep(stage,.46+stagger,.91+stagger);
-   const arc=Math.sin(progress*Math.PI);
-   const a=formations[from],b=transitions[from],at=i*3;
-   const lane=(i%7-3)*.28;
-   positions[at]=T.MathUtils.lerp(a[at],b[at],progress);
-   positions[at+1]=T.MathUtils.lerp(a[at+1],b[at+1],progress)+arc*.22;
-   positions[at+2]=T.MathUtils.lerp(a[at+2],b[at+2],progress)+arc*lane;
-   const hue=T.MathUtils.lerp(themes[from],themes[to],progress);
-   color.setHSL((hue+positions[at+1]*.003+1)%1,.72,.73);
-   colors.set([color.r,color.g,color.b],at);
+  for(const show of shows){
+   const elapsed=Math.max(0,showTime+show.offset),phase=Math.floor(elapsed/20);
+   const stage=(elapsed%20)/20;
+   const from=(phase+show.index)%formations.length,to=(from+1)%formations.length;
+   if(show.phase!==phase){
+    // Start from the exact previous landing positions rather than reindexing lights.
+    show.source=show.destination;
+    show.destination=assignDestinations(show.source,formations[to]);
+    show.phase=phase;
+   }
+   const {positions,colors,geometry,source:a,destination:b}=show;
+   for(let i=0;i<targets.length;i++){
+    const stagger=(Math.sin(i*3.71)*.5+.5)*.035;
+    const u=T.MathUtils.clamp((stage-.48-stagger)/.46,0,1);
+    // Minimum-jerk flight: accelerate and brake gently, then hold the silhouette.
+    const progress=u*u*u*(10+u*(-15+6*u)),arc=Math.sin(progress*Math.PI),at=i*3;
+    positions[at]=T.MathUtils.lerp(a[at],b[at],progress);
+    positions[at+1]=T.MathUtils.lerp(a[at+1],b[at+1],progress)+arc*.18;
+    positions[at+2]=T.MathUtils.lerp(a[at+2],b[at+2],progress)+arc*(i%7-3)*.24;
+    // Cohesive coordinated colours, with a subtle wave rather than blinking noise.
+    const hue=T.MathUtils.lerp(themes[from],themes[to],progress);
+    color.setHSL((hue+positions[at+1]*.004+1)%1,.65,.65+Math.sin(time*.45+i*.02)*.025);
+    colors.set([color.r,color.g,color.b],at);
+   }
+   geometry.attributes.position.needsUpdate=true;
+   geometry.attributes.color.needsUpdate=true;
   }
-  geometry.attributes.position.needsUpdate=true;
-  geometry.attributes.color.needsUpdate=true;
+
  }
  tick(0);
  return {tick};

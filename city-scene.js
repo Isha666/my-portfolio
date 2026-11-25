@@ -1,7 +1,7 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
-import {createCityAttractions} from './city-attractions.js?v=fixed-drone-stage-2';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=pearl-and-uplights-1';
+import {createCityAttractions} from './city-attractions.js?v=four-drone-shows-1';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=four-drone-shows-1';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=extended-drive-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
