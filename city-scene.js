@@ -1,4 +1,5 @@
 import * as T from './vendor/three.module.js';
+import {addCityBackdrop} from './city-backdrop.js?v=city-surround-1';
 import {createCityAttractions} from './city-attractions.js?v=restore-street-1';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=light-show-1';
@@ -16,7 +17,7 @@ function heading(distance){
  return route.reduce((angle,{start,length,turn})=>angle+turn*T.MathUtils.smoothstep(distance,start,start+length),0);
 }
 const streetSamples=[new T.Vector2()];
-for(let d=1;d<=190;d++){
+for(let d=1;d<=320;d++){
  const angle=heading(d-.5);
  streetSamples.push(streetSamples[d-1].clone().add(new T.Vector2(Math.sin(angle),-Math.cos(angle))));
 }
@@ -260,7 +261,7 @@ export function createCityScene(canvas){
    gl_FragColor=vec4(tint,edge*ripple*.36);
   }
  `}));
- for(let d=-8;d<=168;d+=4){
+ for(let d=-80;d<=236;d+=4){
   const x=0,z=-d;
 
   part(scene,box,amber,x,.004,z,.13,.008,1.55);
@@ -471,6 +472,12 @@ export function createCityScene(canvas){
   const reflection=part(scene,reflectionGeo,wash[hero?1:Math.floor(range(0,4))],side*4.8,.021,-d,3.2,11,1);
   reflection.rotation.x=-Math.PI/2;
  }
+ // Extend the street frontage behind arrival and past the drive's final turn.
+ for(const d of [-72,-59,-46,-33,-20,-7,171,184,197,210,223]){
+  for(const side of [-1,1]){
+   building(side*16,-d,8,12+(Math.abs(d)%4)*3,9,(Math.abs(d)+1)%4,false,0);
+  }
+ }
  for(const [d,nameIndex,side] of [[49,1,-1],[80,2,1],[113,3,-1]]){
   const z=-d;
   const sign=billboard(nameIndex,side*11.8,6.1,z,5.5,2.1);
@@ -485,6 +492,13 @@ export function createCityScene(canvas){
  }
  for(const [d,height] of [[24,10.4],[49,9.4],[82,9.9],[112,8.6]]){
   const x=0,z=-d,depth=3.6;
+  // The bridge meets a full-height entrance wing on both sides of the street.
+  for(const side of [-1,1]){
+   building(side*18,z,6,height+6,7,d%4,false,0);
+   part(scene,box,steel,side*15,height+1.05,z,.18,2.5,depth+.4);
+   part(scene,box,neon[1],side*14.88,height+1.98,z,.09,.08,depth+.5);
+  }
+
   part(scene,box,steel,x,height,z,30,.35,depth);
   part(scene,box,steel,x,height+2.07,z,30,.21,depth);
   for(const face of [-1,1]){
@@ -536,11 +550,11 @@ export function createCityScene(canvas){
  }
  function ribbon(left,right,y,material){
   const positions=[],triangles=[];
-  for(let d=-12;d<=170;d++){
+  for(let d=-90;d<=240;d++){
    for(const edge of [left,right]){
     streetPoint(mapped,d,edge,y);positions.push(mapped.x,mapped.y,mapped.z);
    }
-   if(d>-12){const n=(d+12)*2;triangles.push(n-2,n-1,n,n-1,n+1,n);}
+   if(d>-90){const n=(d+90)*2;triangles.push(n-2,n-1,n,n-1,n+1,n);}
   }
   const geo=new T.BufferGeometry();
   geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));
@@ -648,6 +662,7 @@ export function createCityScene(canvas){
   const arms=[-1,1].map(side=>part(group,ball,coat,side*.192,.99,0,.054,.23,.055));
   scene.add(group);return{group,legs,arms,offset:i*3.2,side:i%2?1:-1};
  });
+ addCityBackdrop(scene,streetPoint,heading);
  const attractions=createCityAttractions(scene,streetPoint,heading);
  let time=0,pressureLift;
  const streetPosition=new T.Vector3(),streetLook=new T.Vector3();
