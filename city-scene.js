@@ -1,5 +1,5 @@
 import * as T from './vendor/three.module.js';
-import {createCityAttractions} from './city-attractions.js?v=city-sky-1';
+import {createCityAttractions} from './city-attractions.js?v=restore-street-1';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=light-show-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
@@ -466,8 +466,8 @@ export function createCityScene(canvas){
  for(let d=2;d<160;d+=13)for(const side of [-1,1]){
   const hero=side===1&&d===80;
   if(side===-1&&d===54)waterfrontPavilion(49);
-  else if(!(side===-1&&[2,15,28,67].includes(d))&&!(side===1&&[28,41,106].includes(d)))building(side*range(14,17),-d,range(6,9),hero?30:d%3?range(7,13):range(17,28),range(7,11),hero?1:Math.floor(range(0,4)),hero,Math.round(d/13)%4);
-  if(!(side===-1&&d<=28)&&!((side===1&&d>=28&&d<=54)||(side===-1&&d>=54&&d<=80)||(side===1&&d>=93&&d<=119)))building(side*range(26,49),-d-range(0,19),range(7,13),range(24,52),range(8,13),Math.floor(range(0,4)),Math.round(d/13+side)%4);
+  else if(!(side===-1&&d===67)&&!(side===1&&[28,41,106].includes(d)))building(side*range(14,17),-d,range(6,9),hero?30:d%3?range(7,13):range(17,28),range(7,11),hero?1:Math.floor(range(0,4)),hero,Math.round(d/13)%4);
+  if(!((side===1&&d>=28&&d<=54)||(side===-1&&d>=54&&d<=80)||(side===1&&d>=93&&d<=119)))building(side*range(26,49),-d-range(0,19),range(7,13),range(24,52),range(8,13),Math.floor(range(0,4)),Math.round(d/13+side)%4);
   const reflection=part(scene,reflectionGeo,wash[hero?1:Math.floor(range(0,4))],side*4.8,.021,-d,3.2,11,1);
   reflection.rotation.x=-Math.PI/2;
  }

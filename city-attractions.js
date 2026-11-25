@@ -2,8 +2,8 @@ import * as T from './vendor/three.module.js';
 
 export function createCityAttractions(scene,streetPoint,heading){
  const wheelSite=new T.Group();
- streetPoint(wheelSite.position,30,-15,0);
- wheelSite.rotation.y=-heading(30);
+ streetPoint(wheelSite.position,67,-17,0);
+ wheelSite.rotation.y=-heading(67);
  scene.add(wheelSite);
  const frame=new T.MeshStandardMaterial({color:'#c3d7e6',metalness:.62,roughness:.32});
  const dark=new T.MeshStandardMaterial({color:'#232e4e',metalness:.48,roughness:.3});
