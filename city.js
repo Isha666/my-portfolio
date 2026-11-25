@@ -1,4 +1,4 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=four-drone-shows-1';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=separated-drone-stages-2';
 
 import {hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
@@ -95,7 +95,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
  const driveKeys=['ArrowUp','ArrowDown','w','s',' '];
  const backing=()=>throttle<0||pressedKeys.has('ArrowDown')||pressedKeys.has('s');
  listen('keydown',event=>{
-  if(tower.open||event.altKey||event.metaKey||event.ctrlKey||event.target.closest?.('select'))return;
+  if(tower.open||event.altKey||event.metaKey||event.ctrlKey||['INPUT','TEXTAREA'].includes(event.target.tagName))return;
   if(['ArrowLeft','ArrowRight','a','d'].includes(event.key)){
    event.preventDefault();changeLane(event.key==='ArrowRight'||event.key==='d'?1:0);return;
   }

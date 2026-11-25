@@ -1,7 +1,7 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
-import {createCityAttractions} from './city-attractions.js?v=four-drone-shows-1';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=four-drone-shows-1';
+import {createCityAttractions} from './city-attractions.js?v=separated-drone-stages-2';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=separated-drone-stages-2';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=extended-drive-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
@@ -573,7 +573,9 @@ export function createCityScene(canvas){
   }
   for(let i=0;i<4;i++)part(scene,box,neon[3],side*(11.7+i*.48),.21,z,.11,.03,4.6);
  }
- for(const [d,height] of [[24,10.4],[49,9.4],[82,9.9],[112,8.6],[166,11],[211,10.3]]){
+ const bridgeGlass=new T.MeshStandardMaterial({color:'#7bb9d5',transparent:true,opacity:.19,roughness:.23,metalness:.18,depthWrite:false});
+ const skybridges=[[24,10.4],[49,9.4],[82,9.9],[112,8.6],[166,11],[211,10.3]];
+ for(const [d,height] of skybridges){
   const x=0,z=-d,depth=3.6;
   // The bridge meets a full-height entrance wing on both sides of the street.
   for(const side of [-1,1]){
@@ -588,7 +590,7 @@ export function createCityScene(canvas){
    part(scene,box,neon[d===82?1:0],x,height+.20,z+face*depth*.5,30,.10,.065);
    part(scene,box,neon[1],x,height+1.94,z+face*depth*.5,30,.055,.06);
    for(let i=-12;i<=12;i++){
-    part(scene,box,darkGlass,x+i*1.18,height+1.04,z+face*depth*.49,1.06,1.66,.058);
+    part(scene,box,bridgeGlass,x+i*1.18,height+1.04,z+face*depth*.49,1.06,1.66,.058);
     part(scene,box,steel,x+(i+.48)*1.18,height+1.04,z+face*depth*.5,.048,1.84,.12);
    }
   }
@@ -737,13 +739,13 @@ export function createCityScene(canvas){
   const twoWheels=i%5===1;
   return {model:twoWheels?bike(colors[i%6]):car(colors[i%6],i%3),state:carState};
  });
- const figures=Array.from({length:48},(_,i)=>{
+ const figures=Array.from({length:48+skybridges.length},(_,i)=>{
   const group=new T.Group(),coat=standard(['#ae584f','#687baa','#7b527e','#434855'][i%4]);
   part(group,ball,coat,0,1.06,0,.19,.32,.13);
   part(group,ball,standard('#bd8e78'),0,1.51,0,.11,.15,.105);
   const legs=[-1,1].map(side=>part(group,box,coat,side*.084,.39,0,.105,.65,.1));
   const arms=[-1,1].map(side=>part(group,ball,coat,side*.192,.99,0,.054,.23,.055));
-  scene.add(group);return{group,legs,arms,offset:i*5.2,side:i%2?1:-1};
+  scene.add(group);return{group,legs,arms,offset:i*5.2,side:i%2?1:-1,bridge:i>=48?skybridges[i-48]:null};
  });
  addCityBackdrop(scene,streetPoint,heading);
  const attractions=createCityAttractions(scene,streetPoint,heading);
@@ -767,7 +769,7 @@ export function createCityScene(canvas){
   render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false,freeLook=null){
   if(!reduced)time+=dt;
   if(ascentTime!==null)droneStart=time;
-  attractions.tick(time,time-droneStart);
+  attractions.tick(time,time-droneStart,distance,cameraMode,!!freeLook&&(Math.abs(freeLook.yaw)>.45||Math.abs(freeLook.pitch)>.35));
   ledClock.value=time;ledDistance.value=distance;
   const targetLane=laneOffsets[lane];
   trafficFlow.tick(dt,{distance,lanes:occupiedLanes(lane)});
@@ -797,11 +799,18 @@ export function createCityScene(canvas){
    model.rotation.y=-heading(d)+(side===1?0:Math.PI);
    model.visible=Math.abs(d-distance)<54;
   }
-  figures.forEach(({group,legs,arms,offset,side},i)=>{
-   const d=(offset+time*(.65+i%3*.1))%265;
+  figures.forEach(({group,legs,arms,offset,side,bridge},i)=>{
+   const d=bridge?bridge[0]:(offset+time*(.65+i%3*.1))%265;
+   if(bridge){
+    const cycle=(time*.5+offset)%56,across=cycle<28?cycle:56-cycle;
+    streetPoint(group.position,d,-14+across,bridge[1]+.2);
+    group.rotation.y=-heading(d)+(cycle<28?Math.PI/2:-Math.PI/2);
+    group.visible=Math.abs(d-distance)<85;
+   }else{
    streetPoint(group.position,d,side*(8.65+i%3*.48),.20);
    group.rotation.y=-heading(d)+(side===1?Math.PI:0);
    group.visible=Math.abs(d-distance)<38;
+   }
    legs.forEach((leg,j)=>{leg.rotation.x=Math.sin(time*5.5+i+j*Math.PI)*.51;arms[j].rotation.x=-leg.rotation.x*.62;});
   });
   party.forEach((beam,i)=>{beam.rotation.y=Math.sin(time*.9+i)*.73;beam.scale.z=2.7+Math.sin(time*2+i)*.46;});

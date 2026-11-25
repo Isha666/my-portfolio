@@ -65,8 +65,8 @@ export function createCityAttractions(scene,streetPoint,heading){
  const droneMaterial=new T.ShaderMaterial({
   transparent:true,depthTest:true,depthWrite:false,vertexColors:true,blending:T.AdditiveBlending,
   uniforms:{},
-  vertexShader:'varying vec3 tint;void main(){tint=color;vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(850./-p.z,1.4,3.2);}',
-  fragmentShader:'varying vec3 tint;void main(){float r=length(gl_PointCoord-.5)*2.;float halo=exp(-r*r*5.);float core=1.-smoothstep(.12,.4,r);gl_FragColor=vec4(tint*(1.+core),halo*.72+core*.28);}'
+  vertexShader:'varying vec3 tint;void main(){tint=color;vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(1600./-p.z,1.8,3.2);}',
+  fragmentShader:'uniform float visibility;varying vec3 tint;void main(){float r=length(gl_PointCoord-.5)*2.;float halo=exp(-r*r*5.);float core=1.-smoothstep(.12,.4,r);gl_FragColor=vec4(tint*(1.+core),(halo*.72+core*.28)*visibility);}'
  });
  const formations=Array.from({length:5},()=>new Float32Array(targets.length*3));
  for(let i=0;i<targets.length;i++){
@@ -117,38 +117,47 @@ export function createCityAttractions(scene,streetPoint,heading){
  }
  // Four real world locations. Nothing follows the camera or drops toward the car.
  const shows=[
-  {distance:62,lane:-68,height:94,offset:0},
-  {distance:132,lane:72,height:108,offset:8},
-  {distance:202,lane:-74,height:98,offset:16},
-  {distance:285,lane:65,height:112,offset:24}
+  {position:[100,260,-850],bearing:0,encounter:0,offset:0},
+  {position:[650,260,-650],bearing:-.65,encounter:75,offset:8},
+  {position:[-680,245,-450],bearing:.85,encounter:150,offset:16},
+  {position:[570,270,580],bearing:-2.3,encounter:225,offset:24}
  ].map((site,index)=>{
   const positions=new Float32Array(formations[index].length),colors=new Float32Array(positions.length);
   const geometry=new T.BufferGeometry();
   geometry.setAttribute('position',new T.BufferAttribute(positions,3).setUsage(T.DynamicDrawUsage));
   geometry.setAttribute('color',new T.BufferAttribute(colors,3).setUsage(T.DynamicDrawUsage));
-  const drones=new T.Points(geometry,droneMaterial);
-  streetPoint(drones.position,site.distance,site.lane,site.height);
-  const bearing=heading(Math.max(0,site.distance-45));
-  drones.position.x+=Math.sin(bearing)*190;
-  drones.position.z-=Math.cos(bearing)*190;
-  drones.rotation.y=-bearing;
-  drones.scale.setScalar(6);
+  const material=droneMaterial.clone();
+  material.uniforms.visibility={value:1};
+  const drones=new T.Points(geometry,material);
+  drones.position.set(...site.position);
+  drones.rotation.y=site.bearing;
+  drones.scale.setScalar(7);
   // Dynamic point positions need a fixed bounding sphere covering the entire show.
   geometry.boundingSphere=new T.Sphere(new T.Vector3(),15);
   scene.add(drones);
-  return {...site,index,positions,colors,geometry,phase:-1,
+  return {...site,index,drones,material,positions,colors,geometry,phase:-1,
    source:formations[index].slice(),destination:formations[index].slice()};
  });
  const color=new T.Color();
  const themes=[.56,.94,.61,.11,.77];
- function tick(time,showTime=time){
+ function tick(time,showTime=time,distance=0,cameraMode='chase',lookingAround=false){
   const rotation=time*.11;
   rotor.rotation.z=rotation;
   for(const {cabin,angle} of cabins){
    cabin.position.set(Math.cos(angle+rotation)*radius,centerY+Math.sin(angle+rotation)*radius,0);
    cabin.rotation.z=Math.sin(time*.7+angle)*.025;
   }
+  const nearest=shows.reduce((best,show)=>Math.abs(show.encounter-distance)<Math.abs(best.encounter-distance)?show:best,shows[0]);
   for(const show of shows){
+   // Street-level viewing reveals the local display; panoramic views expose the
+   // four geographically separate aerial stages without stacking silhouettes.
+   show.drones.visible=cameraMode==='skyline'||lookingAround||show===nearest;
+   const panoramic=cameraMode==='skyline'||lookingAround;
+   const start=show.index===0?-Infinity:(shows[show.index-1].encounter+show.encounter)/2;
+   const end=show.index===shows.length-1?Infinity:(show.encounter+shows[show.index+1].encounter)/2;
+   show.material.uniforms.visibility.value=panoramic?1:
+    (show.index===0?1:T.MathUtils.smoothstep(distance,start,start+3))*(show.index===shows.length-1?1:1-T.MathUtils.smoothstep(distance,end-3,end));
+
    const elapsed=Math.max(0,showTime+show.offset),phase=Math.floor(elapsed/20);
    const stage=(elapsed%20)/20;
    const from=(phase+show.index)%formations.length,to=(from+1)%formations.length;
