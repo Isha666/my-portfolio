@@ -1,5 +1,5 @@
 import * as T from './vendor/three.module.js';
-import {addCityBackdrop} from './city-backdrop.js?v=city-surround-1';
+import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
 import {createCityAttractions} from './city-attractions.js?v=distant-drones-1';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=light-show-1';
@@ -295,12 +295,16 @@ export function createCityScene(canvas){
   }
  }
  function building(x,z,w,h,depth,palette,hero=false,style=0){
-  const entrance=-z>=-20&&-z<=20&&Math.abs(x)<50;
-  if(entrance){
+  const sculpted=Math.abs(x)<22&&(
+   x<0&&[2,41,145].includes(-z)||
+   x>0&&[-46,93,210].includes(-z)
+  );
+  if(sculpted){
    const side=Math.sign(x),height=Math.max(h,Math.abs(x)<22?29:39);
    const tower=new T.Group();
    streetPoint(tower.position,-z,x,0);tower.rotation.y=-heading(-z);scene.add(tower);
-   const facade=towerGradient((Math.abs(x)*.13-z*.047)%7);
+   const animated=[-46,41,145].includes(-z);
+   const facade=animated?towerGradient((Math.abs(x)*.13-z*.047)%7):darkGlass;
    if(side<0){
     for(let level=0;level<5;level++){
      const taper=1-level*.09;
@@ -321,7 +325,6 @@ export function createCityScene(canvas){
    part(tower,box,masonry,0,1.5,0,w*1.08,3,depth*1.08);
    for(const flank of [-1,1])part(tower,box,neon[(palette+2)%4],flank*w*.4,3.1,depth*.56,.10,.14,.12);
    tallSign(tower,palette,-side*w*.51,height*.50,0,depth*.84,height*.83,-side*Math.PI/2);
-   tallSign(tower,palette,0,height*.50,depth*.55,w*.78,height*.80,0);
    part(tower,fin,steel,side*w*.26,height+2.5,0,.12,5,.12);
    // Preserve the placement seed used by the original facade's window sampling.
    if(style===0&&!hero){
@@ -522,7 +525,7 @@ export function createCityScene(canvas){
  // Extend the street frontage behind arrival and past the drive's final turn.
  for(const d of [-72,-59,-46,-33,-20,-7,171,184,197,210,223]){
   for(const side of [-1,1]){
-   building(side*16,-d,8,12+(Math.abs(d)%4)*3,9,(Math.abs(d)+1)%4,false,0);
+   building(side*16,-d,8,16+(Math.abs(d)%4)*3,9,(Math.abs(d)+1)%4,false,Math.floor(Math.abs(d)/13)%4);
   }
  }
  for(const [d,nameIndex,side] of [[49,1,-1],[80,2,1],[113,3,-1]]){
