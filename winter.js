@@ -420,11 +420,15 @@ async function openLeadership({hatchTraversed=false}={}){
  if(cityView||pendingSection==='leadership')return;
  cancelNavTransition();
  pendingSection='leadership';
+ navShade=document.createElement('div');
+ navShade.className='reef-entry-cover';
+ navShade.setAttribute('aria-hidden','true');
+ document.body.append(navShade);
  const generation=portalGeneration;
  portalStatus.textContent='Preparing the water elevator…';
  portalStatus.hidden=false;
  try{
-  const {mountCity}=await import('./city.js?v=leadership-refresh-1');
+  const {mountCity}=await import('./city.js?v=city-sky-1');
   if(generation!==portalGeneration)return;
   close();
   aboutStop.resetJourney();
@@ -444,11 +448,13 @@ async function openLeadership({hatchTraversed=false}={}){
   }
   cityView=root;
   document.body.classList.add('in-city');
+  navShade?.remove();navShade=null;
   pendingSection=null;
   portalStatus.hidden=true;
  }catch(error){
   if(generation!==portalGeneration)return;
   document.querySelector('.reef-city-lock')?.remove();
+  navShade?.remove();navShade=null;
   pendingSection=null;
   portalStatus.textContent='Could not load the city. Select Leadership and Achievements to retry.';
   console.error(error);
@@ -488,7 +494,7 @@ document.querySelector('header .brand').onclick=e=>{e.preventDefault();quickHome
   target=clamp(target+delta/range,0,1);
   window.scrollTo({top:target*range,behavior:'instant'});
  }
-function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden){rideTouch=null;return;}if(cityView||restoringLeadership&&pendingSection==='leadership'&&initialCover.isConnected){updateCurrentView();return;}advanceHeldRide(dt);if(!paused)time+=dt;if(directDive){renderDirectReef(dt);return;}const roomScene=aboutStop.interiorScene;
+function animate(){requestAnimationFrame(animate);const raw=clock.getDelta(),dt=Math.min(raw,.05);if(document.hidden){rideTouch=null;return;}if(cityView||pendingSection==='leadership'){updateCurrentView();return;}advanceHeldRide(dt);if(!paused)time+=dt;if(directDive){renderDirectReef(dt);return;}const roomScene=aboutStop.interiorScene;
  if(!snowmanHome.active&&!roomScene&&!seasonPortal.active){
   if(!aboutStop.active&&!aboutStop.complete&&current>.09)aboutStop.warm(renderer);
   if(!aboutStop.active&&aboutStop.complete&&current>=aboutStop.gate)seasonPortal.prefetch();

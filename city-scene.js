@@ -1,4 +1,5 @@
 import * as T from './vendor/three.module.js';
+import {createCityAttractions} from './city-attractions.js?v=city-sky-1';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=light-show-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
@@ -465,8 +466,8 @@ export function createCityScene(canvas){
  for(let d=2;d<160;d+=13)for(const side of [-1,1]){
   const hero=side===1&&d===80;
   if(side===-1&&d===54)waterfrontPavilion(49);
-  else if(!(side===-1&&d===67)&&!(side===1&&[28,41,106].includes(d)))building(side*range(14,17),-d,range(6,9),hero?30:d%3?range(7,13):range(17,28),range(7,11),hero?1:Math.floor(range(0,4)),hero,Math.round(d/13)%4);
-  if(!((side===1&&d>=28&&d<=54)||(side===-1&&d>=54&&d<=80)||(side===1&&d>=93&&d<=119)))building(side*range(26,49),-d-range(0,19),range(7,13),range(24,52),range(8,13),Math.floor(range(0,4)),Math.round(d/13+side)%4);
+  else if(!(side===-1&&[2,15,28,67].includes(d))&&!(side===1&&[28,41,106].includes(d)))building(side*range(14,17),-d,range(6,9),hero?30:d%3?range(7,13):range(17,28),range(7,11),hero?1:Math.floor(range(0,4)),hero,Math.round(d/13)%4);
+  if(!(side===-1&&d<=28)&&!((side===1&&d>=28&&d<=54)||(side===-1&&d>=54&&d<=80)||(side===1&&d>=93&&d<=119)))building(side*range(26,49),-d-range(0,19),range(7,13),range(24,52),range(8,13),Math.floor(range(0,4)),Math.round(d/13+side)%4);
   const reflection=part(scene,reflectionGeo,wash[hero?1:Math.floor(range(0,4))],side*4.8,.021,-d,3.2,11,1);
   reflection.rotation.x=-Math.PI/2;
  }
@@ -647,6 +648,7 @@ export function createCityScene(canvas){
   const arms=[-1,1].map(side=>part(group,ball,coat,side*.192,.99,0,.054,.23,.055));
   scene.add(group);return{group,legs,arms,offset:i*3.2,side:i%2?1:-1};
  });
+ const attractions=createCityAttractions(scene,streetPoint,heading);
  let time=0,pressureLift;
  const streetPosition=new T.Vector3(),streetLook=new T.Vector3();
  const orbitOffset=new T.Vector3(),lookDirection=new T.Vector3();
@@ -666,6 +668,7 @@ export function createCityScene(canvas){
   canChangeLane(distance,lane,previousLane){return occupiedLanes(previousLane).length===1&&trafficFlow.canChange(distance,lane);},
   render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false,freeLook=null){
   if(!reduced)time+=dt;
+  attractions.tick(time);
   ledClock.value=time;ledDistance.value=distance;
   const targetLane=laneOffsets[lane];
   trafficFlow.tick(dt,{distance,lanes:occupiedLanes(lane)});
