@@ -67,16 +67,35 @@ export function createCityAttractions(scene,streetPoint,heading){
  geometry.setAttribute('position',new T.BufferAttribute(positions,3).setUsage(T.DynamicDrawUsage));
  geometry.setAttribute('color',new T.BufferAttribute(colors,3).setUsage(T.DynamicDrawUsage));
  const drones=new T.Points(geometry,new T.ShaderMaterial({
-  transparent:true,depthWrite:false,vertexColors:true,blending:T.AdditiveBlending,
+  transparent:true,depthTest:false,depthWrite:false,vertexColors:true,blending:T.AdditiveBlending,
   uniforms:{},
-  vertexShader:'varying vec3 tint;void main(){tint=color;vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(340./-p.z,2.,7.);}',
+  vertexShader:'varying vec3 tint;void main(){tint=color;vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(1900./-p.z,2.,7.);}',
   fragmentShader:'varying vec3 tint;void main(){float r=length(gl_PointCoord-.5)*2.;float halo=exp(-r*r*5.);float core=1.-smoothstep(.12,.4,r);gl_FragColor=vec4(tint*(1.+core),halo*.72+core*.28);}'
  }));
- drones.position.set(2,18,-40);
+ drones.scale.setScalar(7);
+ const showPosition=new T.Vector3(),showDirection=new T.Vector3();
+ const showDistance=520;
+ function placeShow(distance,camera){
+  if(camera)camera.getWorldDirection(showDirection);
+  const angle=camera?Math.atan2(showDirection.x,-showDirection.z):heading(distance);
+  streetPoint(showPosition,distance,0,78);
+  if(camera){showPosition.x=camera.position.x;showPosition.z=camera.position.z;}
+  drones.position.copy(showPosition);
+  drones.position.x+=Math.sin(angle)*showDistance+Math.cos(angle)*45;
+  drones.position.z+=-Math.cos(angle)*showDistance+Math.sin(angle)*45;
+  drones.rotation.y=-angle;
+  if(camera){
+   const pitch=Math.atan2(showDirection.y,Math.hypot(showDirection.x,showDirection.z));
+   const skyAngle=Math.atan(.72*Math.tan(T.MathUtils.degToRad(camera.fov)*.5));
+   drones.position.y=camera.position.y+showDistance*Math.tan(pitch+skyAngle);
+  }
+ }
  drones.frustumCulled=false;
+ drones.renderOrder=20;
  scene.add(drones);
  const color=new T.Color();
- function tick(time){
+ function tick(time,distance=0){
+  placeShow(distance);
   const rotation=time*.11;
   rotor.rotation.z=rotation;
   for(const {cabin,angle} of cabins){
@@ -98,5 +117,5 @@ export function createCityAttractions(scene,streetPoint,heading){
   geometry.attributes.color.needsUpdate=true;
  }
  tick(6);
- return {tick};
+ return {tick,placeShow};
 }

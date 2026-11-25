@@ -1,6 +1,6 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=city-surround-1';
-import {createCityAttractions} from './city-attractions.js?v=restore-street-1';
+import {createCityAttractions} from './city-attractions.js?v=distant-drones-1';
 import {disposeScene} from './scene-resources.js';
 import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=light-show-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
@@ -129,7 +129,7 @@ export function createCityScene(canvas){
  const renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'low-power'});
  renderer.toneMapping=T.ACESFilmicToneMapping;
  renderer.toneMappingExposure=1.23;
- const scene=new T.Scene(),camera=new T.PerspectiveCamera(61,1,.1,335);
+ const scene=new T.Scene(),camera=new T.PerspectiveCamera(61,1,.1,1250);
  scene.background=new T.Color('#141a38');
  scene.fog=new T.FogExp2('#22213e',.009);
  scene.add(new T.HemisphereLight('#a8b8ff','#745a81',2.15));
@@ -203,20 +203,26 @@ export function createCityScene(canvas){
  const colorCycle=`
   vec3 spectrum(float hue){return .5+.5*cos(6.283*(hue+vec3(0.,.67,.33)));}
  `;
+ let signSerial=0;
  function tallSign(parent,index,x,y,z,width,height,rotation){
+  const phase=(Math.sin(++signSerial*71.3+index*19.1)*43758.54)%1;
   const material=new T.ShaderMaterial({
    side:T.DoubleSide,toneMapped:false,
-   uniforms:{atlas:{value:atlas},clock:ledClock,route:ledDistance,phase:{value:index*.23}},
+   uniforms:{atlas:{value:atlas},clock:ledClock,route:ledDistance,phase:{value:Math.abs(phase)}},
    vertexShader:`varying vec2 panel;void main(){panel=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
    fragmentShader:`
     uniform sampler2D atlas;uniform float clock,route,phase;varying vec2 panel;
     ${colorCycle}
     void main(){
-     float cycle=clock*.19+route*.026+phase;
+     float rate=.06+fract(phase*17.3)*.21;
+     float epoch=floor(clock*(.075+fract(phase*31.)*.065)+phase*9.);
+     vec2 axis=normalize(vec2(sin(phase*71.+epoch*8.3),cos(phase*39.+epoch*5.7))+.001);
+     float travel=dot(panel-.5,axis);
+     float cycle=clock*rate+route*.026+phase;
      float frame=mod(floor(clock*.50+route*.12+phase*4.),4.);
      float ink=texture2D(atlas,vec2(panel.x,(frame+clamp(panel.y,.006,.994))*.25)).a;
-     vec3 color=spectrum(cycle+panel.y*.62);
-     float beam=pow(.5+.5*sin(panel.y*16.-clock*2.9+phase*6.),4.);
+     vec3 color=spectrum(cycle+travel*.72);
+     float beam=pow(.5+.5*sin(travel*16.-clock*(1.+fract(phase*7.)*3.)+phase*6.),4.);
      float border=1.-smoothstep(.008,.032,min(min(panel.x,1.-panel.x),min(panel.y,1.-panel.y)));
      color=color*(.44+.41*beam)+vec3(.75,.77,.94)*max(ink,border*.70);
      gl_FragColor=vec4(color,1.);
@@ -238,8 +244,13 @@ export function createCityScene(canvas){
     uniform float clock,route,phase;varying vec3 facade;varying vec3 faceNormal;
     ${colorCycle}
     void main(){
-     float hue=phase+facade.y*.020+clock*.16+route*.009;
-     float sweep=pow(.5+.5*sin(facade.y*.37-clock*3.+phase*8.),5.);
+     float rate=.05+fract(sin(phase*93.7)*431.4)*.19;
+     float direction=sin(phase*79.)>.0?1.:-1.;
+     float epoch=floor(clock*.09+phase*11.);
+     vec2 axis=normalize(vec2(sin(epoch*4.7+phase*12.),cos(epoch*3.1+phase*31.))+.001);
+     float travel=dot(facade.xy,axis);
+     float hue=phase+travel*.020+clock*rate+route*.009;
+     float sweep=pow(.5+.5*sin(travel*.37-clock*(1.2+rate*8.)*direction+phase*8.),5.);
      float level=.17+.28*sweep;
      float floorBand=pow(.5+.5*cos(facade.y*4.),18.);
      vec3 color=spectrum(hue)*level+floorBand*spectrum(hue+.21)*.33;
@@ -284,6 +295,42 @@ export function createCityScene(canvas){
   }
  }
  function building(x,z,w,h,depth,palette,hero=false,style=0){
+  const entrance=-z>=-20&&-z<=20&&Math.abs(x)<50;
+  if(entrance){
+   const side=Math.sign(x),height=Math.max(h,Math.abs(x)<22?29:39);
+   const tower=new T.Group();
+   streetPoint(tower.position,-z,x,0);tower.rotation.y=-heading(-z);scene.add(tower);
+   const facade=towerGradient((Math.abs(x)*.13-z*.047)%7);
+   if(side<0){
+    for(let level=0;level<5;level++){
+     const taper=1-level*.09;
+     const volume=part(tower,box,level%2?darkGlass:slab,side*level*.28,height*(level+.5)/5,0,w*taper,height/5,depth*taper);
+     volume.rotation.y=level*.055;
+     part(tower,box,neon[(palette+level)%4],side*level*.28,height*(level+1)/5,.04,w*taper+.15,.10,depth*taper+.15);
+    }
+    part(tower,box,facade,0,height*.53,depth*.505,w*.90,height*.80,.035);
+   }else{
+    for(const flank of [-1,1]){
+     part(tower,box,darkGlass,flank*w*.29,height*.5,0,w*.40,height,depth*.80);
+     part(tower,box,facade,flank*w*.29,height*.49,depth*.41,w*.37,height*.90,.04);
+     part(tower,box,neon[(palette+1)%4],flank*w*.29,height+.3,0,w*.46,.18,depth*.89);
+    }
+    part(tower,box,steel,0,height*.76,0,w,.65,depth*.65);
+    part(tower,box,neon[palette],0,height*.78,depth*.35,w,.12,.1);
+   }
+   part(tower,box,masonry,0,1.5,0,w*1.08,3,depth*1.08);
+   for(const flank of [-1,1])part(tower,box,neon[(palette+2)%4],flank*w*.4,3.1,depth*.56,.10,.14,.12);
+   tallSign(tower,palette,-side*w*.51,height*.50,0,depth*.84,height*.83,-side*Math.PI/2);
+   tallSign(tower,palette,0,height*.50,depth*.55,w*.78,height*.80,0);
+   part(tower,fin,steel,side*w*.26,height+2.5,0,.12,5,.12);
+   // Preserve the placement seed used by the original facade's window sampling.
+   if(style===0&&!hero){
+    const samples=Math.floor(h/1.65)*Math.max(2,Math.floor(w/1.23));
+    for(let i=0;i<samples;i++)random();
+   }
+   return;
+  }
+
   if(hero||h>=18&&Math.floor(-z)%3===2){
    const side=Math.sign(x);
    tallSign(scene,palette,x-side*w*.57,h*.54,z+depth*.18,1.48,h*.78,-side*Math.PI/2);
@@ -683,7 +730,7 @@ export function createCityScene(canvas){
   canChangeLane(distance,lane,previousLane){return occupiedLanes(previousLane).length===1&&trafficFlow.canChange(distance,lane);},
   render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false,freeLook=null){
   if(!reduced)time+=dt;
-  attractions.tick(time);
+  attractions.tick(time,distance);
   ledClock.value=time;ledDistance.value=distance;
   const targetLane=laneOffsets[lane];
   trafficFlow.tick(dt,{distance,lanes:occupiedLanes(lane)});
@@ -696,7 +743,10 @@ export function createCityScene(canvas){
   }
   for(const show of lightShows){
    const nearby=1-T.MathUtils.smoothstep(Math.abs(distance-show.distance),5,32);
-   const hue=(show.offset+time*(.10+nearby*.12)+distance*.008)%1;
+   const variation=Math.sin(show.distance*12.7+show.offset*83.)*43758.54;
+   const rate=.045+(variation-Math.floor(variation))*.17;
+   const direction=Math.sin(show.distance*7.3)>0?1:-1;
+   const hue=((show.offset+time*rate*direction+distance*.008)%1+1)%1;
    show.material.color.setHSL(hue,.90,.53+nearby*.13);
   }
   for(const signal of signals){
@@ -774,7 +824,9 @@ export function createCityScene(canvas){
   }
   if(pressureLift){pressureLift.dispose();pressureLift=null;renderer.renderLists.dispose();}
   hero.visible=mode!=='hood';
-  camera.position.copy(streetPosition);camera.lookAt(streetLook);renderer.render(scene,camera);
+  camera.position.copy(streetPosition);camera.lookAt(streetLook);
+  attractions.placeShow(distance,camera);
+  renderer.render(scene,camera);
   return true;
  },dispose(){pressureLift?.dispose();disposeScene(scene);for(const material of billboardMaterials){material.map.dispose();material.dispose();}renderer.dispose();renderer.forceContextLoss();}};
 }

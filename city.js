@@ -1,4 +1,4 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=city-surround-1';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=arrival-towers-1';
 
 import {hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
