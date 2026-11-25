@@ -1,9 +1,9 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
-import {createCityAttractions} from './city-attractions.js?v=separated-drone-stages-2';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=separated-drone-stages-2';
+import {createCityAttractions} from './city-attractions.js?v=city-uturn-1';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=city-uturn-1';
 import {disposeScene} from './scene-resources.js';
-import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=extended-drive-1';
+import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=city-uturn-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
 export const towerDistance=85;
@@ -759,23 +759,28 @@ export function createCityScene(canvas){
   renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.76?65:68;camera.updateProjectionMatrix();
  }
  resize();
- function occupiedLanes(lane){
-  return Math.abs(lanePosition-laneOffsets[lane])>.08?[0,1]:[lane];
+ function occupiedLanes(lane,side=1){
+  return Math.abs(lanePosition-side*laneOffsets[lane])>.08?[0,1]:[lane];
  }
  return {
   resize,
-  drive(from,to,lane){return trafficFlow.drive(from,to,occupiedLanes(lane));},
-  canChangeLane(distance,lane,previousLane){return occupiedLanes(previousLane).length===1&&trafficFlow.canChange(distance,lane);},
-  render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false,freeLook=null){
+  drive(from,to,lane,side=1){return trafficFlow.drive(from,to,occupiedLanes(lane,side),side);},
+  canUTurn(distance){return trafficFlow.canTurn(distance);},
+  canChangeLane(distance,lane,previousLane,side=1){return occupiedLanes(previousLane,side).length===1&&trafficFlow.canChange(distance,lane,side);},
+  render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false,freeLook=null,travelSide=1,turn=null){
   if(!reduced)time+=dt;
   if(ascentTime!==null)droneStart=time;
   attractions.tick(time,time-droneStart,distance,cameraMode,!!freeLook&&(Math.abs(freeLook.yaw)>.45||Math.abs(freeLook.pitch)>.35));
   ledClock.value=time;ledDistance.value=distance;
-  const targetLane=laneOffsets[lane];
-  trafficFlow.tick(dt,{distance,lanes:occupiedLanes(lane)});
-  lanePosition=reduced?targetLane:T.MathUtils.damp(lanePosition,targetLane,7,dt);
-  streetPoint(hero.position,distance,lanePosition,.03);
-  hero.rotation.y=-heading(distance)+(targetLane-lanePosition)*.047;
+  const turnT=turn?T.MathUtils.smoothstep(turn.progress,0,1):0;
+  const facing=turn?(turn.from===1?turnT:1-turnT):(travelSide===1?0:1);
+  const forwardSign=Math.cos(facing*Math.PI);
+  const targetLane=laneOffsets[lane]*forwardSign;
+  const carDistance=distance+(turn?Math.sin(turnT*Math.PI)*1.1*turn.from:0);
+  trafficFlow.tick(dt,{distance,lanes:occupiedLanes(lane,travelSide),side:travelSide,turning:!!turn});
+  lanePosition=reduced||turn?targetLane:T.MathUtils.damp(lanePosition,targetLane,7,dt);
+  streetPoint(hero.position,carDistance,lanePosition,.03);
+  hero.rotation.y=-heading(distance)+facing*Math.PI+(targetLane-lanePosition)*.047;
   for(const {sign,index,distance:at} of signs){
    const driveCycle=Math.floor((distance-at+180)/6 + time*.45);
    sign.material=billboardMaterials[((index+driveCycle)%billboardMaterials.length+billboardMaterials.length)%billboardMaterials.length];
@@ -819,20 +824,20 @@ export function createCityScene(canvas){
   const shortView=1-T.MathUtils.smoothstep(innerHeight,400,620);
   const lookDistance=T.MathUtils.lerp(mobile?16:20-6*shortView,0,approach);
   streetPoint(streetPosition,distance,T.MathUtils.lerp(lanePosition,stopSide*8,approach),T.MathUtils.lerp(mobile?6.2:6.8,2.15,approach));
-  const behind=T.MathUtils.lerp(17,1.4,approach),angle=heading(distance);
+  const behind=T.MathUtils.lerp(22,1.4,approach),angle=heading(distance)-facing*Math.PI;
   streetPosition.x-=Math.sin(angle)*behind;streetPosition.z+=Math.cos(angle)*behind;
   const farFromLift=T.MathUtils.smoothstep(distance,0,13);
-  streetPoint(streetLook,distance+lookDistance,T.MathUtils.lerp(lanePosition*.65,stopSide*14.5,approach),T.MathUtils.lerp((mobile?2:farFromLift+2.2)-1.35*shortView,2.4,approach));
+  streetPoint(streetLook,distance+lookDistance*forwardSign,T.MathUtils.lerp(lanePosition*.65,stopSide*14.5,approach),T.MathUtils.lerp((mobile?4.6:5.2)-1.0*shortView,2.4,approach));
   const mode=ascentTime!==null||approach>.002?'chase':cameraMode;
-  let fov=mobile?74:76;
+  let fov=mobile?82:84;
   camera.layers.set(landmarkViews[mode]?.layer??0);
   if(mode==='hood'){
-   streetPoint(streetPosition,distance+1.1,lanePosition,1.35);
-   streetPoint(streetLook,distance+22,lanePosition,2.25);
+   streetPoint(streetPosition,distance+1.1*forwardSign,lanePosition,1.35);
+   streetPoint(streetLook,distance+22*forwardSign,lanePosition,2.25);
    fov=mobile?65:70;
   }else if(mode==='skyline'){
-   streetPoint(streetPosition,distance-12,lanePosition-3,mobile?13:17);
-   streetPoint(streetLook,distance+22,0,mobile?12:15);
+   streetPoint(streetPosition,distance-12*forwardSign,lanePosition-3*forwardSign,mobile?13:17);
+   streetPoint(streetLook,distance+22*forwardSign,0,mobile?12:15);
    fov=72;
   }else if(landmarkViews[mode]){
    const view=landmarkViews[mode];

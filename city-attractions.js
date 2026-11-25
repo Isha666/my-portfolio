@@ -65,7 +65,7 @@ export function createCityAttractions(scene,streetPoint,heading){
  const droneMaterial=new T.ShaderMaterial({
   transparent:true,depthTest:true,depthWrite:false,vertexColors:true,blending:T.AdditiveBlending,
   uniforms:{},
-  vertexShader:'varying vec3 tint;void main(){tint=color;vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(1600./-p.z,1.8,3.2);}',
+  vertexShader:'varying vec3 tint;void main(){tint=color;vec4 p=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*p;gl_PointSize=clamp(2400./-p.z,2.,4.);}',
   fragmentShader:'uniform float visibility;varying vec3 tint;void main(){float r=length(gl_PointCoord-.5)*2.;float halo=exp(-r*r*5.);float core=1.-smoothstep(.12,.4,r);gl_FragColor=vec4(tint*(1.+core),(halo*.72+core*.28)*visibility);}'
  });
  const formations=Array.from({length:5},()=>new Float32Array(targets.length*3));
@@ -117,10 +117,10 @@ export function createCityAttractions(scene,streetPoint,heading){
  }
  // Four real world locations. Nothing follows the camera or drops toward the car.
  const shows=[
-  {position:[100,260,-850],bearing:0,encounter:0,offset:0},
-  {position:[650,260,-650],bearing:-.65,encounter:75,offset:8},
-  {position:[-680,245,-450],bearing:.85,encounter:150,offset:16},
-  {position:[570,270,580],bearing:-2.3,encounter:225,offset:24}
+  {encounter:0,offset:0},
+  {encounter:75,offset:8},
+  {encounter:150,offset:16},
+  {encounter:225,offset:24}
  ].map((site,index)=>{
   const positions=new Float32Array(formations[index].length),colors=new Float32Array(positions.length);
   const geometry=new T.BufferGeometry();
@@ -129,9 +129,12 @@ export function createCityAttractions(scene,streetPoint,heading){
   const material=droneMaterial.clone();
   material.uniforms.visibility={value:1};
   const drones=new T.Points(geometry,material);
-  drones.position.set(...site.position);
-  drones.rotation.y=site.bearing;
-  drones.scale.setScalar(7);
+  const bearing=(heading(Math.max(0,site.encounter-25))+heading(site.encounter+25))*.5;
+  streetPoint(drones.position,site.encounter,15,205);
+  drones.position.x+=Math.sin(bearing)*380;
+  drones.position.z-=Math.cos(bearing)*380;
+  drones.rotation.y=-bearing;
+  drones.scale.setScalar(6.5);
   // Dynamic point positions need a fixed bounding sphere covering the entire show.
   geometry.boundingSphere=new T.Sphere(new T.Vector3(),15);
   scene.add(drones);

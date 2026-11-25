@@ -36,6 +36,7 @@ loadingPanel.querySelector('a').onclick=event=>{
    <div class="drive">
     <div class="drive-status">
      <button id="citySound" type="button" aria-pressed="false">Sound off</button>
+     <button id="cityUTurn" type="button" title="Turn around into the opposite carriageway (U)">↶ U-turn (U)</button>
      <span id="driveHint">Drag to look around</span>
      <button id="pavilion" hidden>Look toward Waterfront Pavilion ↗</button>
      <button id="enterTower">Enter the Leadership Tower ↗</button>
@@ -77,7 +78,7 @@ loadingPanel.querySelector('a').onclick=event=>{
  <button class="intro-skip" type="button" autofocus>Skip intro</button>
 </dialog>
 <script type="module" src="home-intro.js?v=city-lift-1"></script>
-<script src="vendor/gsap.min.js"></script><script type="module" src="winter.js?v=bridge-crowds-1"></script><script>
+<script src="vendor/gsap.min.js"></script><script type="module" src="winter.js?v=city-uturn-1"></script><script>
 if ('serviceWorker' in navigator) {
  window.addEventListener('portfolio-ready', () => {
   navigator.serviceWorker.register('./portfolio-offline.js').catch(error => console.warn('Offline cache unavailable', error));

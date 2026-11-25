@@ -3,8 +3,8 @@ export const laneOffsets=[2.25,5.08];
 const start=-15,end=278,gap=5.7;
 
 export function signalPhase(distance,time){
- const phase=(time+distance*.09)%14;
- return phase<7?2:phase<9?1:0;
+ const phase=(time+distance*.09)%12;
+ return phase<8?2:phase<9.5?1:0;
 }
 
 export function createTraffic(count){
@@ -32,12 +32,13 @@ export function createTraffic(count){
  return {
   cars,
   phase(distance){return signalPhase(distance,time);},
-  canChange(distance,lane){
-   return !cars.some(car=>car.side===1&&car.lane===lane&&Math.abs(car.distance-distance)<gap+.75);
+  canTurn(distance){return !cars.some(car=>Math.abs(car.distance-distance)<5.5);},
+  canChange(distance,lane,side=1){
+   return !cars.some(car=>car.side===side&&car.lane===lane&&Math.abs(car.distance-distance)<gap+.75);
   },
-  drive(from,to,lanes){
+  drive(from,to,lanes,side=1){
    if(from===to)return from;
-   return limit(from,to,Math.sign(to-from),1,lanes,cars.map(car=>({...car,lanes:[car.lane]})),to>from);
+   return limit(from,to,Math.sign(to-from),side,lanes,cars.map(car=>({...car,lanes:[car.lane]})),(to-from)*side>0);
   },
   tick(dt,player){
    time+=dt;
@@ -56,7 +57,11 @@ export function createTraffic(count){
      }
      const obstacles=[];
      if(leader)obstacles.push({...leader,lanes:[lane]});
-     if(player)obstacles.push({distance:player.distance,side:1,lanes:player.lanes});
+     if(player){
+      if(player.turning){
+       obstacles.push({distance:player.distance,side,lanes:[0,1]});
+      }else obstacles.push({distance:player.distance,side:player.side??1,lanes:player.lanes});
+     }
      const target=car.distance+side*car.speed*dt;
      car.distance=limit(car.distance,side===1?Math.min(target,end):Math.max(target,start),side,side,[lane],obstacles,true);
      leader=car;
