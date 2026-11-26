@@ -1,9 +1,9 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
-import {createCityAttractions} from './city-attractions.js?v=city-uturn-1';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=city-uturn-1';
+import {createCityAttractions} from './city-attractions.js?v=sky-celebration-1';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=sky-celebration-1';
 import {disposeScene} from './scene-resources.js';
-import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=city-uturn-1';
+import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=sky-celebration-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
 export const towerDistance=85;
@@ -137,10 +137,11 @@ export function createCityScene(canvas){
  scene.fog=new T.FogExp2('#22213e',.009);
  scene.add(new T.HemisphereLight('#a8b8ff','#745a81',2.15));
  scene.add(new T.AmbientLight('#a790bf',.40));
+ const skyClock={value:0};
  const sky=new T.Mesh(new T.SphereGeometry(1,32,16),new T.ShaderMaterial({
-  side:T.BackSide,depthTest:false,depthWrite:false,
+  side:T.BackSide,depthTest:false,depthWrite:false,uniforms:{time:skyClock},
   vertexShader:`varying vec3 ray;void main(){ray=position;vec4 p=projectionMatrix*viewMatrix*vec4(position,0.);gl_Position=p.xyww;}`,
-  fragmentShader:`varying vec3 ray;
+  fragmentShader:`varying vec3 ray;uniform float time;
    float hash(vec2 p){return fract(sin(dot(p,vec2(112.2,312.5)))*43758.54);}
    float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
    void main(){
@@ -149,6 +150,14 @@ export function createCityScene(canvas){
     vec2 p=d.xz/sqrt(.045+d.y*d.y)*4.;
     float clouds=smoothstep(.43,.78,noise(p)*.63+noise(p*2.)*.25+noise(p*4.)*.12);
     color+=vec3(.10,.11,.16)*clouds*smoothstep(-.05,.28,d.y);
+    vec2 starGrid=vec2(atan(d.x,-d.z),asin(clamp(d.y,-1.,1.)))*vec2(95.,85.);
+    vec2 cell=floor(starGrid),local=fract(starGrid);
+    float seed=hash(cell+19.);
+    vec2 center=.15+.7*vec2(hash(cell+7.),hash(cell-13.));
+    vec2 delta=local-center;
+    float star=step(.972,seed)*exp(-dot(delta,delta)*65.);
+    float twinkle=.72+.28*sin(time*(.35+seed*.55)+seed*200.);
+    color+=mix(vec3(.73,.83,1.),vec3(1.,.90,.71),hash(cell-31.))*star*twinkle*1.9*smoothstep(.08,.25,d.y);
     gl_FragColor=vec4(color,1.);
    }
   `
@@ -771,7 +780,7 @@ export function createCityScene(canvas){
   if(!reduced)time+=dt;
   if(ascentTime!==null)droneStart=time;
   attractions.tick(time,time-droneStart,distance,cameraMode,!!freeLook&&(Math.abs(freeLook.yaw)>.45||Math.abs(freeLook.pitch)>.35));
-  ledClock.value=time;ledDistance.value=distance;
+  skyClock.value=time;ledClock.value=time;ledDistance.value=distance;
   const turnT=turn?T.MathUtils.smoothstep(turn.progress,0,1):0;
   const facing=turn?(turn.from===1?turnT:1-turnT):(travelSide===1?0:1);
   const forwardSign=Math.cos(facing*Math.PI);

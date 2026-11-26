@@ -1,4 +1,5 @@
 import * as T from './vendor/three.module.js';
+import {createCitySky,skySites} from './city-sky.js?v=sky-celebration-1';
 
 export function createCityAttractions(scene,streetPoint,heading){
  const wheelSite=new T.Group();
@@ -115,13 +116,9 @@ export function createCityAttractions(scene,streetPoint,heading){
   }
   return assigned;
  }
- // Four real world locations. Nothing follows the camera or drops toward the car.
- const shows=[
-  {encounter:0,offset:0},
-  {encounter:75,offset:8},
-  {encounter:150,offset:16},
-  {encounter:225,offset:24}
- ].map((site,index)=>{
+ const nightSky=createCitySky(scene);
+ const shows=skySites.filter(site=>site.index%2===0).map((site,index)=>{
+  site={...site,offset:index*6};
   const positions=new Float32Array(formations[index].length),colors=new Float32Array(positions.length);
   const geometry=new T.BufferGeometry();
   geometry.setAttribute('position',new T.BufferAttribute(positions,3).setUsage(T.DynamicDrawUsage));
@@ -129,12 +126,10 @@ export function createCityAttractions(scene,streetPoint,heading){
   const material=droneMaterial.clone();
   material.uniforms.visibility={value:1};
   const drones=new T.Points(geometry,material);
-  const bearing=(heading(Math.max(0,site.encounter-25))+heading(site.encounter+25))*.5;
-  streetPoint(drones.position,site.encounter,15,205);
-  drones.position.x+=Math.sin(bearing)*380;
-  drones.position.z-=Math.cos(bearing)*380;
-  drones.rotation.y=-bearing;
-  drones.scale.setScalar(6.5);
+  drones.layers.enableAll();
+  drones.position.copy(site.position);
+  drones.rotation.y=-site.angle;
+  drones.scale.setScalar(6);
   // Dynamic point positions need a fixed bounding sphere covering the entire show.
   geometry.boundingSphere=new T.Sphere(new T.Vector3(),15);
   scene.add(drones);
@@ -144,23 +139,16 @@ export function createCityAttractions(scene,streetPoint,heading){
  const color=new T.Color();
  const themes=[.56,.94,.61,.11,.77];
  function tick(time,showTime=time,distance=0,cameraMode='chase',lookingAround=false){
+  nightSky.tick(showTime);
   const rotation=time*.11;
   rotor.rotation.z=rotation;
   for(const {cabin,angle} of cabins){
    cabin.position.set(Math.cos(angle+rotation)*radius,centerY+Math.sin(angle+rotation)*radius,0);
    cabin.rotation.z=Math.sin(time*.7+angle)*.025;
   }
-  const nearest=shows.reduce((best,show)=>Math.abs(show.encounter-distance)<Math.abs(best.encounter-distance)?show:best,shows[0]);
   for(const show of shows){
-   // Street-level viewing reveals the local display; panoramic views expose the
-   // four geographically separate aerial stages without stacking silhouettes.
-   show.drones.visible=cameraMode==='skyline'||lookingAround||show===nearest;
-   const panoramic=cameraMode==='skyline'||lookingAround;
-   const start=show.index===0?-Infinity:(shows[show.index-1].encounter+show.encounter)/2;
-   const end=show.index===shows.length-1?Infinity:(show.encounter+shows[show.index+1].encounter)/2;
-   show.material.uniforms.visibility.value=panoramic?1:
-    (show.index===0?1:T.MathUtils.smoothstep(distance,start,start+3))*(show.index===shows.length-1?1:1-T.MathUtils.smoothstep(distance,end-3,end));
-
+   // All five displays occupy separate fixed sectors, including when looking back.
+   show.material.uniforms.visibility.value=1;
    const elapsed=Math.max(0,showTime+show.offset),phase=Math.floor(elapsed/20);
    const stage=(elapsed%20)/20;
    const from=(phase+show.index)%formations.length,to=(from+1)%formations.length;
