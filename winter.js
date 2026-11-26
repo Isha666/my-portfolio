@@ -428,7 +428,7 @@ async function openLeadership({hatchTraversed=false}={}){
  portalStatus.textContent='Preparing the water elevator…';
  portalStatus.hidden=false;
  try{
-  const {mountCity}=await import('./city.js?v=ferris-bottom-exit-1');
+  const {mountCity}=await import('./city.js?v=skypark-elevator-1');
   if(generation!==portalGeneration)return;
   close();
   aboutStop.resetJourney();

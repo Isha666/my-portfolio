@@ -1,9 +1,10 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
-import {createCityAttractions} from './city-attractions.js?v=ferris-bottom-exit-1';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=ferris-bottom-exit-1';
+import {createCityAttractions} from './city-attractions.js?v=skypark-elevator-1';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=skypark-elevator-1';
+import {createSkyParkVisit} from './city-skypark.js?v=skypark-elevator-1';
 import {disposeScene} from './scene-resources.js';
-import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=ferris-bottom-exit-1';
+import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=skypark-elevator-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
 export const towerDistance=85;
@@ -758,10 +759,12 @@ export function createCityScene(canvas){
  });
  addCityBackdrop(scene,streetPoint,heading);
  const attractions=createCityAttractions(scene,streetPoint,heading);
+ const skyParkVisit=createSkyParkVisit(terraces);
  let time=0,droneStart=0,pressureLift;
  const streetPosition=new T.Vector3(),streetLook=new T.Vector3();
  const orbitOffset=new T.Vector3(),lookDirection=new T.Vector3();
  const ferrisEye=new T.Vector3(),ferrisLook=new T.Vector3();
+ const parkEye=new T.Vector3(),parkLook=new T.Vector3();
  let lanePosition=2.25;
  function resize(){
   const w=innerWidth,h=innerHeight;
@@ -781,7 +784,7 @@ export function createCityScene(canvas){
   drive(from,to,lane,side=1){return trafficFlow.drive(from,to,occupiedLanes(lane,side),side);},
   canUTurn(distance){return trafficFlow.canTurn(distance);},
   canChangeLane(distance,lane,previousLane,side=1){return occupiedLanes(previousLane,side).length===1&&trafficFlow.canChange(distance,lane,side);},
-  render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false,freeLook=null,travelSide=1,turn=null,ferrisBlend=0){
+  render(distance,dt,approach=0,ascentTime=null,lane=0,stopSide=1,cameraMode='chase',reduced=false,freeLook=null,travelSide=1,turn=null,ferrisBlend=0,skyParkTime=0){
   if(!reduced)time+=dt;
   if(ascentTime!==null)droneStart=time;
   attractions.tick(time,time-droneStart,distance,cameraMode,!!freeLook&&(Math.abs(freeLook.yaw)>.45||Math.abs(freeLook.pitch)>.35));
@@ -890,6 +893,18 @@ export function createCityScene(canvas){
    const blend=T.MathUtils.smoothstep(ferrisBlend,0,1);
    streetPosition.lerp(ferrisEye,blend);streetLook.lerp(ferrisLook,blend);
    fov=T.MathUtils.lerp(fov,mobile?78:74,blend);camera.layers.set(0);
+  }
+  skyParkVisit.pose(skyParkTime,parkEye,parkLook);
+  if(skyParkTime>0){
+   if(freeLook){
+    lookDirection.subVectors(parkLook,parkEye).applyAxisAngle(yAxis,freeLook.yaw);
+    const horizon=Math.hypot(lookDirection.x,lookDirection.z);
+    lookDirection.y=horizon*Math.tan(T.MathUtils.clamp(Math.atan2(lookDirection.y,horizon)+freeLook.pitch,-1.25,1.25));
+    parkLook.copy(parkEye).add(lookDirection);
+   }
+   const blend=skyParkVisit.boardingBlend(skyParkTime);
+   streetPosition.lerp(parkEye,blend);streetLook.lerp(parkLook,blend);
+   fov=T.MathUtils.lerp(fov,mobile?78:76,blend);camera.layers.set(0);
   }
   if(camera.fov!==fov){camera.fov=fov;camera.updateProjectionMatrix();}
   if(ascentTime!==null){

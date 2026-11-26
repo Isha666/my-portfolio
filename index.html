@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Isha — A World in the Making</title><link rel="stylesheet" href="style.css?v=direct-reef-1"><link rel="modulepreload" href="vendor/three.module.js"><link rel="modulepreload" href="vendor/three.core.js"><link rel="stylesheet" href="city.css?v=ferris-bottom-exit-1"></head><body>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Isha — A World in the Making</title><link rel="stylesheet" href="style.css?v=direct-reef-1"><link rel="modulepreload" href="vendor/three.module.js"><link rel="modulepreload" href="vendor/three.core.js"><link rel="stylesheet" href="city.css?v=skypark-elevator-1"></head><body>
 <canvas id="world" aria-label="A first-person reindeer sleigh ride through a snow-covered forest with igloos and alpine mountains"></canvas><div class="grain"></div>
 <header><a class="brand" href="#" aria-label="Return to start">isha<span class="brand-star" aria-hidden="true"></span><small>A WORLD IN THE MAKING</small></a><nav aria-label="Portfolio sections"><button data-section="home">Home</button><button data-section="about" id="returnIgloo">About</button><button data-section="projects" title="Explore projects in the botanical garden">Projects</button><button data-section="skills" title="Dive straight into the underwater skills reef">Skills</button><button class="leadership-nav" type="button" data-section="leadership">Leadership and Achievements</button><button data-section="contact" disabled title="Contact garden — coming next">Contact <small>soon</small></button></nav><button class="outline" id="indexBtn">Open field guide <span>↗</span></button></header>
 <div class="chapter-mark"><span id="chapterNum">01</span><i></i><span id="seasonLabel">THE QUIET BEFORE THE SPARK</span></div>
@@ -38,6 +38,7 @@ loadingPanel.querySelector('a').onclick=event=>{
      <button id="citySound" type="button" aria-pressed="false">Sound off</button>
      <button id="cityUTurn" type="button" title="Turn around into the opposite carriageway (U)">↶ U-turn (U)</button>
      <span id="driveHint">Drag to look around</span>
+     <button id="visitSkyPark" type="button" hidden>Enter SkyPark tower ↗</button>
      <button id="rideFerris" type="button" hidden>Ride the Ferris wheel ↗</button>
      <button id="pavilion" hidden>Look toward Waterfront Pavilion ↗</button>
      <button id="enterTower">Enter the Leadership Tower ↗</button>
@@ -79,7 +80,7 @@ loadingPanel.querySelector('a').onclick=event=>{
  <button class="intro-skip" type="button" autofocus>Skip intro</button>
 </dialog>
 <script type="module" src="home-intro.js?v=source-720p-1"></script>
-<script src="vendor/gsap.min.js"></script><script type="module" src="winter.js?v=ferris-bottom-exit-1"></script><script>
+<script src="vendor/gsap.min.js"></script><script type="module" src="winter.js?v=skypark-elevator-1"></script><script>
 if ('serviceWorker' in navigator) {
  window.addEventListener('portfolio-ready', () => {
   navigator.serviceWorker.register('./portfolio-offline.js').catch(error => console.warn('Offline cache unavailable', error));
