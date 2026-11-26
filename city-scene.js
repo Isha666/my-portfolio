@@ -1,10 +1,11 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
-import {createCityAttractions} from './city-attractions.js?v=grand-skypark-1';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=grand-skypark-1';
-import {createSkyParkVisit} from './city-skypark.js?v=grand-skypark-1';
+import {createCityAttractions} from './city-attractions.js?v=skypark-50-floors-2';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=skypark-50-floors-2';
+import {skyParkFloors,skyParkFloorHeight,skyParkDeckRise} from './city-skypark-levels.js?v=skypark-50-floors-2';
+import {createSkyParkVisit} from './city-skypark.js?v=skypark-50-floors-2';
 import {disposeScene} from './scene-resources.js';
-import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=grand-skypark-1';
+import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=skypark-50-floors-2';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
 export const towerDistance=85;
@@ -450,23 +451,39 @@ export function createCityScene(canvas){
    part(scene,box,neon[1],face-Math.sign(x)*2.9,3.32,z,.08,.15,4.68);
   }
  }
+ let pavilionSite=null;
  function waterfrontPavilion(d){
-  const x=-15.2,z=-d;
+  const x=0,z=0;
+  const root=new T.Group();streetPoint(root.position,d,-15.2,0);root.rotation.y=-heading(d);scene.add(root);pavilionSite=root;
+  const glazing=new T.MeshStandardMaterial({color:'#b8e7ec',transparent:true,opacity:.28,roughness:.17,metalness:.15,side:T.DoubleSide,depthWrite:false});
   const facade=new T.CylinderGeometry(1,1,1,32,1,false,0,Math.PI*2);
   const arch=new T.TorusGeometry(1,.027,6,36,Math.PI);
-  part(scene,drum,bronze,x,.46,z,5.7,.56,6.1);
-  part(scene,facade,darkGlass,x,2.84,z,4.92,4.3,5.12);
-  part(scene,drum,steel,x,5.16,z,5.15,.29,5.64);
-  part(scene,drum,bronze,x,5.43,z,5.55,.23,5.80);
+  part(root,drum,bronze,x,.46,z,5.7,.56,6.1);
+  part(root,facade,glazing,x,2.84,z,4.92,4.3,5.12);
+  part(root,drum,steel,x,5.16,z,5.15,.29,5.64);
+  part(root,drum,bronze,x,5.43,z,5.55,.23,5.80);
   for(const offset of [-4.0,-2.5,-1,1,2.5,4.0]){
-   const archway=part(scene,arch,neon[offset>0?0:3],x+2.4,5.55,z+offset,2.25,2.8,1);
+   const archway=part(root,arch,neon[offset>0?0:3],x+2.4,5.55,z+offset,2.25,2.8,1);
    archway.rotation.y=Math.PI/2;
   }
   for(let i=0;i<15;i++){
    const a=i/14*Math.PI-Math.PI/2;
-   part(scene,box,neon[3],x+Math.cos(a)*4.92,2.68,z+Math.sin(a)*5.12,.07,3.67,.08);
+   part(root,box,neon[3],x+Math.cos(a)*4.92,2.68,z+Math.sin(a)*5.12,.07,3.67,.08);
   }
-  for(let i=0;i<9;i++)part(scene,box,amber,x+4.53+i*.47,.19,z,.11,.045,3.72);
+  for(let i=0;i<9;i++)part(root,box,amber,x+4.53+i*.47,.19,z,.11,.045,3.72);
+  for(const [tx,tz] of [[-1.8,-2.1],[1.2,0],[-1.5,2.0]]){
+   part(root,drum,bronze,tx,1.5,tz,.85,.12,.85);
+   part(root,box,steel,tx,.9,tz,.08,1.2,.08);
+   part(root,ball,amber,tx,1.82,tz,.12,.28,.12);
+   for(const side of [-1,1]){
+    part(root,drum,pearl,tx+side*1.15,.85,tz,.43,.15,.43);
+    part(root,box,steel,tx+side*1.15,.46,tz,.07,.8,.07);
+   }
+  }
+  const water=new T.Mesh(new T.PlaneGeometry(34,28),standard('#1c4861',.2,.4));water.rotation.x=-Math.PI/2;water.position.set(-4,-.03,0);root.add(water);
+  for(let i=0;i<12;i++)part(root,box,neon[i%2?1:3],-8+(i%3),.005,-11+i*2,.8+(i%4),.012,.035);
+  root.traverse(object=>object.layers.enable(4));
+  scene.traverse(object=>{if(object.isLight||object===sky)object.layers.enable(4);});
  }
  // The major skyline silhouettes get their own geometry and rigid site transforms.
  const pearl=standard('#997d96',.29,.61);
@@ -507,25 +524,37 @@ export function createCityScene(canvas){
  part(crowns,box,neon[1],-1.25,27.16,0,.09,.14,9.85);
  const terraces=site(43,22.8);
  const terraceColors=facadeLights(43,.50),terraceWash=towerGradient(1);
+ const terraceBatches=new Map();
+ function terraceInstance(material,x,y,z,w,h,d){
+  if(!terraceBatches.has(material))terraceBatches.set(material,[]);
+  terraceBatches.get(material).push([x,y,z,w,h,d]);
+ }
+ const towerHeight=skyParkFloors*skyParkFloorHeight;
  for(const z of [-11,0,11]){
-  for(let floor=0;floor<11;floor++){
-   const slide=(floor/10)**2*2.4;
-   part(terraces,box,z===0?terraceWash:cobalt,slide,floor*2.38+1.19,z,5.7,2.38,7.1);
-   part(terraces,box,pearl,slide,floor*2.38+2.31,z,6.22,.15,7.42);
-   part(terraces,box,terraceColors,slide-3.06,floor*2.38+2.39,z,.09,.075,7.33);
-   for(const k of [-2.3,0,2.3])for(const side of [-1,1]){
-    part(terraces,box,neon[(floor+side)%3===0?1:3],slide+side*2.88,floor*2.38+1.18,z+k,.06,.86,1.31);
-   }
+  for(let tier=0;tier<10;tier++){
+   const slide=(tier/9)**2*2.4;
+   part(terraces,box,z===0?terraceWash:cobalt,slide,(tier+.5)*towerHeight/10,z,5.7,towerHeight/10,7.1);
+  }
+  for(let floor=0;floor<skyParkFloors;floor++){
+   const slide=(floor/(skyParkFloors-1))**2*2.4,y=floor*skyParkFloorHeight;
+   terraceInstance(pearl,slide,y+2.31,z,6.22,.15,7.42);
+   terraceInstance(terraceColors,slide-3.06,y+2.39,z,.09,.075,7.33);
+   for(const k of [-2.3,0,2.3])for(const side of [-1,1])terraceInstance(neon[(floor+side)%3===0?1:3],slide+side*2.88,y+1.18,z+k,.06,.86,1.31);
   }
  }
+ for(const [material,instances] of terraceBatches){
+  const batch=new T.InstancedMesh(box,material,instances.length),model=new T.Object3D();
+  instances.forEach(([x,y,z,w,h,d],index)=>{model.position.set(x,y,z);model.scale.set(w,h,d);model.updateMatrix();batch.setMatrixAt(index,model.matrix);});
+  terraces.add(batch);
+ }
  terraces.userData.facadeFinish=1;
- tallSign(terraces,1,-3.12,14.15,0,2.30,23,-Math.PI/2);
- part(terraces,ball,pearl,1.8,27.1,0,4.7,1.35,18.5);
- part(terraces,ball,terraceColors,1.8,27.97,0,4.4,.16,17.4);
+ tallSign(terraces,1,-3.12,towerHeight*.52,0,2.30,towerHeight*.93,-Math.PI/2);
+ part(terraces,ball,pearl,1.8,27.1+skyParkDeckRise,0,4.7,1.35,18.5);
+ part(terraces,ball,terraceColors,1.8,27.97+skyParkDeckRise,0,4.4,.16,17.4);
  const rooftopBark=standard('#51404a'),rooftopLeaf=standard('#315e51');
  for(const z of [-11,-6,-1,4,9,14]){
-  part(terraces,box,rooftopBark,1,28.45,z,.12,.78,.12);
-  part(terraces,ball,rooftopLeaf,1,29,z,.73,.62,.69);
+  part(terraces,box,rooftopBark,1,28.45+skyParkDeckRise,z,.12,.78,.12);
+  part(terraces,ball,rooftopLeaf,1,29+skyParkDeckRise,z,.73,.62,.69);
  }
  const sphereHall=site(69,-17.9);
  const ringColors=facadeLights(69,.83);
@@ -544,7 +573,7 @@ export function createCityScene(canvas){
  }
  // Frame each landmark from an open side of its site so nearby towers cannot clip the view.
  const landmarkViews={
-  skypark:{root:terraces,position:[51,24,13],look:[0,14.5,0],layer:1},
+  skypark:{root:terraces,position:[135,85,60],look:[0,63,0],layer:1},
   ring:{root:sphereHall,position:[25,10,5],look:[0,7.5,0],layer:2},
   spires:{root:crowns,position:[-62,31,14],look:[0,25,0],layer:3}
  };
@@ -787,6 +816,7 @@ export function createCityScene(canvas){
  const orbitOffset=new T.Vector3(),lookDirection=new T.Vector3();
  const ferrisEye=new T.Vector3(),ferrisLook=new T.Vector3();
  const parkEye=new T.Vector3(),parkLook=new T.Vector3();
+ const pavilionEye=new T.Vector3(),pavilionLook=new T.Vector3();
  let lanePosition=2.25;
  function resize(){
   const w=innerWidth,h=innerHeight;
@@ -799,6 +829,7 @@ export function createCityScene(canvas){
  }
  return {
   resize,
+  scrollSkyPark(x,z,yaw){skyParkVisit.scroll(x,z,yaw);},
   walkSkyPark(x,z,yaw,dt){skyParkVisit.walk(x,z,yaw,dt);},
   resetSkyParkWalk(){skyParkVisit.resetWalk();},
   beginSkyParkReturn(){skyParkVisit.beginReturn();},
@@ -908,6 +939,18 @@ export function createCityScene(canvas){
    lookDirection.y=horizon*Math.tan(elevation);
    streetLook.copy(streetPosition).add(lookDirection);
   }
+  if(approach>.002&&stopSide<0&&pavilionSite){
+   pavilionEye.set(mobile?16:11,5.4,mobile?13.5:9.3);pavilionLook.set(0,2.6,0);
+   pavilionSite.updateWorldMatrix(true,false);
+   pavilionSite.localToWorld(pavilionEye);pavilionSite.localToWorld(pavilionLook);
+   if(freeLook){
+    orbitOffset.subVectors(pavilionEye,pavilionLook).applyAxisAngle(yAxis,freeLook.yaw);
+    orbitOffset.y=T.MathUtils.clamp(orbitOffset.y+freeLook.pitch*5,1.2,9);
+    pavilionEye.copy(pavilionLook).add(orbitOffset);
+   }
+   streetPosition.lerp(pavilionEye,approach);streetLook.lerp(pavilionLook,approach);
+   fov=T.MathUtils.lerp(fov,mobile?72:60,approach);camera.layers.set(4);
+  }
   if(ferrisBlend>0){
    attractions.ridePose(ferrisEye,ferrisLook);
    if(freeLook){
@@ -920,6 +963,7 @@ export function createCityScene(canvas){
    streetPosition.lerp(ferrisEye,blend);streetLook.lerp(ferrisLook,blend);
    fov=T.MathUtils.lerp(fov,mobile?78:74,blend);camera.layers.set(0);
   }
+  scene.fog.density=T.MathUtils.lerp(.009,.0038,T.MathUtils.smoothstep(skyParkTime,6.4,15.4));
   skyParkVisit.tick(time);
   skyParkVisit.pose(skyParkTime,parkEye,parkLook);
   if(skyParkTime>0){

@@ -1,18 +1,19 @@
 import * as T from './vendor/three.module.js';
-import {addSkyParkDetails} from './city-skypark-details.js?v=grand-skypark-1';
+import {skyParkFloors,skyParkDeckHeight,skyParkDeckRise} from './city-skypark-levels.js?v=skypark-50-floors-2';
+import {addSkyParkDetails} from './city-skypark-details.js?v=skypark-50-floors-2';
 
-export const skyParkDuration=14.8;
+export const skyParkDuration=17.8;
 const clamp=value=>Math.max(0,Math.min(1,value));
 const ease=value=>{const t=clamp(value);return clamp(t*t*t*(10+t*(-15+6*t)));};
-export function skyParkHeight(time){return .3+28.25*ease((time-6.4)/6);}
+export function skyParkHeight(time){return .3+(skyParkDeckHeight-.3)*ease((time-6.4)/9);}
 export function skyParkStatus(time,descending=false){
- if(time>=skyParkDuration)return 'SkyPark deck · Walk with arrows / WASD · Drag to look';
+ if(time>=skyParkDuration)return 'SkyPark · Floor 50 · Scroll / arrows / WASD to walk';
  if(time<1.6)return descending?'Returning to your car':'Entering the SkyPark grand lobby';
  if(time<3.6)return descending?'Walking through the lobby':'Grand lobby · SkyPark concierge';
  if(time<5.6)return descending?'Leaving the elevator':'Boarding the glass elevator';
  if(time<6.4)return descending?'Lobby · doors opening':'Elevator doors closing';
- if(time<12.4)return `${descending?'Descending':'Ascending'} · Floor ${Math.max(1,Math.ceil(skyParkHeight(time)/2.38))} / 12`;
- if(time<13.2)return descending?'Elevator doors closing':'Observation deck · doors opening';
+ if(time<15.4)return `${descending?'Descending':'Ascending'} · Floor ${Math.max(1,Math.min(skyParkFloors,Math.ceil(skyParkHeight(time)/2.38)))} / ${skyParkFloors}`;
+ if(time<16.2)return descending?'Elevator doors closing':'Observation deck · doors opening';
  return descending?'Boarding the elevator':'Stepping onto the observation deck';
 }
 
@@ -28,8 +29,8 @@ export function createSkyParkVisit(tower){
  }
  // A real exterior lift shaft on the road-facing side of the existing tower.
  for(const z of [-1.35,1.35]){
-  part(tower,metal,-3.25,14.8,z,.14,29.6,.14);
-  for(const y of [2,9,16,23,28.5])part(tower,metal,-2.8,y,z,1.1,.12,.12);
+  part(tower,metal,-3.25,(skyParkDeckHeight+1)/2,z,.14,skyParkDeckHeight+1,.14);
+  for(let y=2;y<=skyParkDeckHeight;y+=12)part(tower,metal,-2.8,y,z,1.1,.12,.12);
  }
  const cabin=new T.Group();cabin.position.set(-4.55,.3,0);tower.add(cabin);
  part(cabin,floor,0,0,0,2.6,.18,2.7);
@@ -49,22 +50,23 @@ export function createSkyParkVisit(tower){
  });
  part(tower,floor,-4.5,.15,0,5,.3,5);
  for(const z of [-2.4,2.4])part(tower,light,-5.6,.32,z,3.2,.035,.075);
+ const deckRoot=new T.Group();deckRoot.position.y=skyParkDeckRise;tower.add(deckRoot);
  // Extend the existing rooftop garden with an accessible observation balcony.
- part(tower,floor,1.3,28.49,0,7.8,.16,30);
- part(tower,floor,-4.7,28.49,1.7,5.1,.16,9.2);
+ part(deckRoot,floor,1.3,28.49,0,7.8,.16,30);
+ part(deckRoot,floor,-4.7,28.49,1.7,5.1,.16,9.2);
  for(const [x,z,w,d] of [[-7.2,1.7,.04,9.2],[-4.7,-2.9,5.1,.04],[-4.7,6.3,5.1,.04]]){
-  part(tower,glass,x,29.12,z,w,1.15,d);
-  part(tower,metal,x,29.73,z,w===.04?.08:w,.065,d===.04?.08:d);
-  part(tower,light,x,28.62,z,w===.04?.055:w,.04,d===.04?.055:d);
+  part(deckRoot,glass,x,29.12,z,w,1.15,d);
+  part(deckRoot,metal,x,29.73,z,w===.04?.08:w,.065,d===.04?.08:d);
+  part(deckRoot,light,x,28.62,z,w===.04?.055:w,.04,d===.04?.055:d);
  }
- for(const z of [-2,1,4,5.5])part(tower,metal,-7.2,29.1,z,.045,1.2,.045);
+ for(const z of [-2,1,4,5.5])part(deckRoot,metal,-7.2,29.1,z,.045,1.2,.045);
  for(const [x,z,length] of [[-2.55,-8.95,11.9],[-2.55,10.6,8.6],[5.15,0,29.8]]){
-  part(tower,glass,x,29.12,z,.035,1.15,length);
-  part(tower,metal,x,29.73,z,.08,.065,length);
+  part(deckRoot,glass,x,29.12,z,.035,1.15,length);
+  part(deckRoot,metal,x,29.73,z,.08,.065,length);
  }
  for(const z of [-14.9,14.9]){
-  part(tower,glass,1.3,29.12,z,7.7,1.15,.035);
-  part(tower,metal,1.3,29.73,z,7.7,.065,.08);
+  part(deckRoot,glass,1.3,29.12,z,7.7,1.15,.035);
+  part(deckRoot,metal,1.3,29.73,z,7.7,.065,.08);
  }
  const details=addSkyParkDetails(tower);
  const deckPosition=new T.Vector2(-6.15,3.5);
@@ -95,6 +97,11 @@ export function createSkyParkVisit(tower){
   const x=(-fz*dx+fx*forward)*step,z=(fx*dx+fz*forward)*step;
   if(walkable(deckPosition.x+x,deckPosition.y))deckPosition.x+=x;
   if(walkable(deckPosition.x,deckPosition.y+z))deckPosition.y+=z;
+ }
+ function scroll(horizontal,forward,yaw){
+  const distance=Math.hypot(horizontal,forward);if(!distance)return;
+  const count=Math.ceil(Math.min(1.2,distance)/.1),step=Math.min(1.2,distance)/count;
+  for(let i=0;i<count;i++)walk(horizontal/distance,forward/distance,yaw,step/2.25);
  }
  function beginReturn(){
   // A small grid routes the return walk around planters, seating and railings.
@@ -134,9 +141,9 @@ export function createSkyParkVisit(tower){
  function pose(time,eye,look){
   const height=skyParkHeight(time);
   cabin.position.y=height;
-  const open=1-ease((time-5.6)/.8)+ease((time-12.4)/.8);
+  const open=1-ease((time-5.6)/.8)+ease((time-15.4)/.8);
   for(const door of doors)door.position.z=door.userData.side*(.62+open*1.18);
-  localEye.set(-4.9,height+1.6,0);localLook.set(-48,height+3.5,-19);
+  localEye.set(-4.9,height+1.6,0);localLook.set(-48,height+3.5,4);
   if(time<5.6){
    if(time<3.6){
     localEye.copy(entrance).lerp(lobbyStop,ease((time-1.6)/2));
@@ -144,19 +151,19 @@ export function createSkyParkVisit(tower){
    }else{
     const step=ease((time-3.6)/2);
     localEye.copy(lobbyStop).lerp(cabinEntrance,step);
-    const angle=T.MathUtils.lerp(.69,-1.99,step);
+    const angle=T.MathUtils.lerp(.69,-1.48,step);
     localLook.set(localEye.x+Math.sin(angle)*30,localEye.y+1.5,localEye.z+Math.cos(angle)*30);
    }
   }
-  landingEye.set(deckPosition.x,30.15,deckPosition.y);
-  landingLook.set(deckPosition.x-44,25,deckPosition.y-24.5);
-  const step=ease((time-13.2)/1.6);
+  landingEye.set(deckPosition.x,skyParkDeckHeight+1.6,deckPosition.y);
+  landingLook.set(deckPosition.x-170,30,deckPosition.y-95);
+  const step=ease((time-16.2)/1.6);
   localEye.lerp(landingEye,step);localLook.lerp(landingLook,step);
   tower.updateWorldMatrix(true,false);
   eye.copy(tower.localToWorld(localEye));look.copy(tower.localToWorld(localLook));
  }
  pose(0,new T.Vector3(),new T.Vector3());
- return {pose,walk,walkable,beginReturn,returnToLift,resetWalk,tick(time){details.tick(time,deckPosition);},
+ return {pose,walk,scroll,walkable,beginReturn,returnToLift,resetWalk,tick(time){details.tick(time,deckPosition);},
   getDeckPosition(target){return target.copy(deckPosition);},
   boardingBlend(time){return ease(time/1.6);}};
 }

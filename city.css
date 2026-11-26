@@ -118,3 +118,6 @@ body.in-city{overflow:hidden}
 .skypark-walk-pad button{padding:0;border-radius:8px;background:#31465d;color:white;border:1px solid #8cabc1;font-size:1.1rem;touch-action:none;user-select:none}
 .skypark-walk [data-walk="forward"]{grid-area:1/2}.skypark-walk [data-walk="left"]{grid-area:2/1}.skypark-walk [data-walk="right"]{grid-area:2/3}.skypark-walk [data-walk="back"]{grid-area:3/2}
 @media(max-width:600px){.skypark-walk{bottom:150px;right:14px;padding:8px}}
+
+.city-pavilion .drive-controls,.city-pavilion .camera-picker,.city-pavilion #cityUTurn,.city-pavilion #rideFerris,.city-pavilion #visitSkyPark{display:none}
+.city-pavilion .drive{min-width:0;max-width:calc(100vw - 28px)}

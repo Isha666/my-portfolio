@@ -1,6 +1,6 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=grand-skypark-1';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=skypark-50-floors-2';
 
-import {skyParkDuration,skyParkStatus} from './city-skypark.js?v=grand-skypark-1';
+import {skyParkDuration,skyParkStatus} from './city-skypark.js?v=skypark-50-floors-2';
 
 import {hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
@@ -57,8 +57,9 @@ export function mountCity(root,{hatchTraversed=false}={}){
  }
  function updateDrive(){
   const onWheel=riding(),onDeck=visitingPark();
-  const title=onDeck?'SkyPark':'City After Dark';
-  const eyebrow=onDeck?(parkTime<6.4?'SkyPark / Grand lobby':parkTime<12.4?'SkyPark / Glass elevator':'SkyPark / Observation deck'):'Leadership & Achievements';
+  const title=onDeck?'SkyPark':inspecting?'Waterfront Pavilion':'City After Dark';
+  root.classList.toggle('city-pavilion',inspecting&&!onDeck&&!onWheel);
+  const eyebrow=onDeck?(parkTime<6.4?'SkyPark / Grand lobby':parkTime<15.4?'SkyPark / Glass elevator':'SkyPark / Observation deck'):inspecting?'Waterfront / Glass lounge':'Leadership & Achievements';
   if(cityTitle.textContent!==title)cityTitle.textContent=title;
   if(cityEyebrow.textContent!==eyebrow)cityEyebrow.textContent=eyebrow;
   root.classList.toggle('city-observing',onDeck);
@@ -75,10 +76,10 @@ export function mountCity(root,{hatchTraversed=false}={}){
   enter.disabled=!near;
   enter.hidden=!near;
   pavilion.hidden=!atPavilion;
-  const action=inspecting?'Return to the road ↗':'Look toward Waterfront Pavilion ↗';
+  const action=inspecting?'Return to the road ↗':'View Waterfront Pavilion ↗';
   if(pavilion.textContent!==action)pavilion.textContent=action;
   const destination=near?'Leadership Tower':atPavilion?'Waterfront Pavilion':distance<41?'Right toward Waterfront Pavilion':distance<76?'Left toward Leadership Tower':distance>=driveLength?'End of the city drive':distance>160?'Skyline promenade':distance>105?'Continue toward the landmark district':'Scroll or hold ↑ to drive';
-  const status=onDeck?(parkWalkingBack?'Walking back to the elevator':skyParkStatus(parkTime,parkTarget===0)):onWheel?(ferrisExitRequested?'Staying aboard until the cabin reaches the bottom':'Ferris wheel ride · Drag to look around'):(turn?'Turning around':turnRequested?'Waiting for a safe U-turn':waitingForTraffic?'Waiting for traffic':destination)+' · '+(direction<0?'Return carriageway · ':'')+(lane?'Right lane':'Left lane');
+  const status=inspecting&&!onDeck&&!onWheel?'Waterfront Pavilion · Drag to look around':onDeck?(parkWalkingBack?'Walking back to the elevator':skyParkStatus(parkTime,parkTarget===0)):onWheel?(ferrisExitRequested?'Staying aboard until the cabin reaches the bottom':'Ferris wheel ride · Drag to look around'):(turn?'Turning around':turnRequested?'Waiting for a safe U-turn':waitingForTraffic?'Waiting for traffic':destination)+' · '+(direction<0?'Return carriageway · ':'')+(lane?'Right lane':'Left lane');
   if(hint.textContent!==status)hint.textContent=status;
  }
  function changeLane(value){
@@ -120,7 +121,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
  uturn.onclick=requestUTurn;
  root.querySelector('#laneLeft').onclick=()=>changeLane(0);
  root.querySelector('#laneRight').onclick=()=>changeLane(1);
- pavilion.onclick=()=>{speed=0;inspecting=!inspecting;updateDrive();};
+ pavilion.onclick=()=>{clearDrivingInput();inspecting=!inspecting;freeLook.yaw=freeLook.pitch=0;updateDrive();};
  cameraPicker.onchange=()=>{freeLook.yaw=freeLook.pitch=0;};
  cameraPicker.disabled=!city;
 
@@ -129,6 +130,10 @@ export function mountCity(root,{hatchTraversed=false}={}){
   if(event.ctrlKey||tower.open)return;
   event.preventDefault();
   const multiplier=event.deltaMode===1?14:event.deltaMode===2?innerHeight:1;
+  if(visitingPark()){
+   if(parkTime>=skyParkDuration&&!parkWalkingBack)city?.scrollSkyPark(event.deltaX*multiplier*.008,event.deltaY*multiplier*.008,freeLook.yaw);
+   return;
+  }
   drive(Math.sign(event.deltaY)*Math.min(21,Math.abs(event.deltaY)*multiplier*.04));
  },{passive:false});
  canvas.addEventListener('pointerdown',event=>{
@@ -138,6 +143,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
  });
  canvas.addEventListener('pointermove',event=>{
   if(drag?.id!==event.pointerId)return;
+  if(event.pointerType!=='touch'&&!(event.buttons&1)){drag=null;canvas.classList.remove('is-looking');return;}
   freeLook.yaw=(freeLook.yaw-(event.clientX-drag.x)*.009)%(Math.PI*2);
   freeLook.pitch=Math.max(-1.13,Math.min(1.13,freeLook.pitch-(event.clientY-drag.y)*.008));
   drag.x=event.clientX;drag.y=event.clientY;

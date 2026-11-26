@@ -1,4 +1,5 @@
 import * as T from './vendor/three.module.js';
+import {skyParkDeckRise} from './city-skypark-levels.js?v=skypark-50-floors-2';
 
 export function addSkyParkDetails(tower){
  const box=new T.BoxGeometry(1,1,1),ball=new T.SphereGeometry(1,12,8),column=new T.CylinderGeometry(1,1,1,16);
@@ -87,25 +88,26 @@ export function addSkyParkDetails(tower){
  }
  const receptionist=person(lobby,4);receptionist.group.position.set(-4, .3,-5.4);receptionist.group.rotation.y=-Math.PI/2;
  receptionist.arms.forEach(arm=>{arm.rotation.x=-.72;});
+ const deckRoot=new T.Group();deckRoot.position.y=skyParkDeckRise;deckRoot.updateMatrix();tower.add(deckRoot);
  const guests=[];
  for(let i=0;i<7;i++){
   const guest=person(lobby,i);guest.deck=false;guest.index=i;guests.push(guest);
  }
  for(let i=0;i<12;i++){
-  const guest=person(tower,i+2);guest.deck=true;guest.index=i;guests.push(guest);
+  const guest=person(deckRoot,i+2);guest.deck=true;guest.index=i;guests.push(guest);
  }
  // Warm rooftop lounge seating and low-level lighting keep the skyline clear.
  for(const z of [-8,0,8]){
-  part(tower,dark,4.05,28.91,z,.85,.62,2.3);
-  part(tower,velvet,3.9,29.2,z,.78,.18,2.1);
-  part(tower,velvet,4.43,29.55,z,.13,.78,2.3);
-  part(tower,gold,3.13,29.02,z,.6,.08,.7);
+  part(deckRoot,dark,4.05,28.91,z,.85,.62,2.3);
+  part(deckRoot,velvet,3.9,29.2,z,.78,.18,2.1);
+  part(deckRoot,velvet,4.43,29.55,z,.13,.78,2.3);
+  part(deckRoot,gold,3.13,29.02,z,.6,.08,.7);
  }
  for(const z of [-13,-8,-3,2,7,12])for(const x of [-1.9,4.7]){
-  part(tower,gold,x,28.95,z,.11,.72,.11);
-  part(tower,warm,x,29.29,z,.16,.1,.16);
+  part(deckRoot,gold,x,28.95,z,.11,.72,.11);
+  part(deckRoot,warm,x,29.29,z,.16,.1,.16);
  }
- for(const z of [-13,-5.3])part(tower,warm,-4.7,28.62,z,4.2,.025,.045);
+ for(const z of [-13,-5.3])part(deckRoot,warm,-4.7,28.62,z,4.2,.025,.045);
  // Share draw calls across guests while keeping independent walking skeletons.
  const batches=new Map();
  for(const {group} of people)for(const part of group.children){
@@ -157,7 +159,7 @@ export function addSkyParkDetails(tower){
   for(const {group} of people)group.updateMatrix();
   for(const batch of batches.values()){
    batch.parts.forEach(({part,group},index)=>{
-    part.updateMatrix();instanceMatrix.multiplyMatrices(group.matrix,part.matrix);if(group.parent===lobby)instanceMatrix.premultiply(lobby.matrix);batch.mesh.setMatrixAt(index,instanceMatrix);
+    part.updateMatrix();instanceMatrix.multiplyMatrices(group.matrix,part.matrix);if(group.parent===lobby)instanceMatrix.premultiply(lobby.matrix);else if(group.parent===deckRoot)instanceMatrix.premultiply(deckRoot.matrix);batch.mesh.setMatrixAt(index,instanceMatrix);
    });
    batch.mesh.instanceMatrix.needsUpdate=true;
   }
