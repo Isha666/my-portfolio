@@ -1,10 +1,10 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
-import {createCityAttractions} from './city-attractions.js?v=skypark-elevator-1';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=skypark-elevator-1';
-import {createSkyParkVisit} from './city-skypark.js?v=skypark-elevator-1';
+import {createCityAttractions} from './city-attractions.js?v=grand-skypark-1';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=grand-skypark-1';
+import {createSkyParkVisit} from './city-skypark.js?v=grand-skypark-1';
 import {disposeScene} from './scene-resources.js';
-import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=skypark-elevator-1';
+import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=grand-skypark-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
 export const towerDistance=85;
@@ -284,6 +284,7 @@ export function createCityScene(canvas){
    gl_FragColor=vec4(tint,edge*ripple*.36);
   }
  `}));
+ const streetLampPairs=[];
  for(let d=-80;d<=272;d+=4){
   const x=0,z=-d;
 
@@ -294,14 +295,12 @@ export function createCityScene(canvas){
    part(scene,box,white,x+side*6.6,.007,z,.055,.006,3.75);
    part(scene,box,white,x+side*3.6,.008,z,.044,.006,1.8);
    if(d%8===0){
-    part(scene,box,roof,x+side*7.83,.34,z,.14,.61,.14);
-    part(scene,box,amber,x+side*7.83,.59,z,.16,.15,.16);
+    streetLampPairs.push([part(scene,box,roof,x+side*7.83,.34,z,.14,.61,.14),part(scene,box,amber,x+side*7.83,.59,z,.16,.15,.16)]);
     part(scene,box,neon[1],x+side*10.25,.18,z,.40,.038,1.62);
    }
    if(d%12===0){
     const lampX=x+side*7.8;
-    part(scene,box,roof,lampX,2.1,z,.11,4.2,.11);
-    part(scene,box,amber,lampX-side*.25,4.16,z,.57,.07,.26);
+    streetLampPairs.push([part(scene,box,roof,lampX,2.1,z,.11,4.2,.11),part(scene,box,amber,lampX-side*.25,4.16,z,.57,.07,.26)]);
     const glow=part(scene,reflectionGeo,wash[3],x+side*5,.02,z,2.8,7,1);glow.rotation.x=-Math.PI/2;
    }
   }
@@ -620,14 +619,16 @@ export function createCityScene(canvas){
   const x=0;
   for(let i=-6;i<=6;i++)part(scene,box,white,x+i*1.07,.007,-d,.60,.01,1.8);
  }
+ const signalStreetPairs=[];
  const signals=[],signalHousing=standard('#232b36',.44,.36);
  const neutralSignal=new T.Color('#272d37');
  const signalColors=['#ff354d','#ffc15b','#49ffb0'].map(color=>new T.Color(color));
  const lensGeometry=new T.SphereGeometry(1,12,8);
  for(const distance of crossings)for(const side of [-1,1]){
   const z=-distance;
-  part(scene,box,steel,side*7.28,2.54,z,.16,5.05,.15);
-  part(scene,box,steel,side*4.89,4.99,z,4.80,.11,.12);
+  const post=part(scene,box,steel,side*7.28,2.54,z,.16,5.05,.15);
+  const arm=part(scene,box,steel,side*4.89,4.99,z,4.80,.11,.12);
+  signalStreetPairs.push({post,arm,side});
   part(scene,box,signalHousing,side*2.65,4.54,z,.47,1.13,.28);
   const lights=signalColors.map((color,i)=>{
    const lens=part(scene,lensGeometry,lit('#272d37'),side*2.65,4.86-i*.31,z+.17,.145,.145,.07);
@@ -642,6 +643,27 @@ export function createCityScene(canvas){
   const d=-mesh.position.z;
   streetPoint(mapped,d,mesh.position.x,mesh.position.y);
   mesh.position.copy(mapped);mesh.rotateOnWorldAxis(yAxis,-heading(d));
+ }
+ // Keep street furniture outside the new lobby footprint on the curved sidewalk.
+ terraces.updateWorldMatrix(true,false);
+ for(const pair of streetLampPairs){
+  const local=terraces.worldToLocal(pair[0].position.clone());
+  if(local.x> -12.5&&local.x< -3&&local.z>-.5&&local.z<14.6){
+   local.x=-12.9;
+   const shift=terraces.localToWorld(local).sub(pair[0].position);
+   pair.forEach(object=>object.position.add(shift));
+  }
+ }
+ for(const {post,arm,side} of signalStreetPairs){
+  const local=terraces.worldToLocal(post.position.clone());
+  if(local.x> -12.5&&local.x< -3&&local.z>-.5&&local.z<14.6){
+   const roadEnd=arm.localToWorld(new T.Vector3(-side*.5,0,0));
+   local.x=-12.9;post.position.copy(terraces.localToWorld(local));
+   const poleEnd=post.position.clone();poleEnd.y=roadEnd.y;
+   const delta=poleEnd.clone().sub(roadEnd);
+   arm.position.copy(roadEnd).add(poleEnd).multiplyScalar(.5);
+   arm.scale.x=Math.hypot(delta.x,delta.z);arm.rotation.y=-Math.atan2(delta.z,delta.x);
+  }
  }
  function ribbon(left,right,y,material){
   const positions=[],triangles=[];
@@ -777,6 +799,10 @@ export function createCityScene(canvas){
  }
  return {
   resize,
+  walkSkyPark(x,z,yaw,dt){skyParkVisit.walk(x,z,yaw,dt);},
+  resetSkyParkWalk(){skyParkVisit.resetWalk();},
+  beginSkyParkReturn(){skyParkVisit.beginReturn();},
+  returnToSkyParkLift(dt){return skyParkVisit.returnToLift(dt);},
   boardFerris(){attractions.board();},
   requestFerrisExit(immediate=false){attractions.requestExit(immediate);},
   canLeaveFerris(){return attractions.canDisembark();},
@@ -894,6 +920,7 @@ export function createCityScene(canvas){
    streetPosition.lerp(ferrisEye,blend);streetLook.lerp(ferrisLook,blend);
    fov=T.MathUtils.lerp(fov,mobile?78:74,blend);camera.layers.set(0);
   }
+  skyParkVisit.tick(time);
   skyParkVisit.pose(skyParkTime,parkEye,parkLook);
   if(skyParkTime>0){
    if(freeLook){

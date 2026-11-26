@@ -110,3 +110,11 @@ body.in-city{overflow:hidden}
 .city-observing .drive-controls,.city-observing .camera-picker,.city-observing #cityUTurn{display:none}
 .city-observing .drive{min-width:0;max-width:calc(100vw - 28px)}
 .city-observing #visitSkyPark{border-color:#abe5ff;background:#243d4d;color:#f1fbff}
+
+.skypark-walk{position:absolute;right:clamp(14px,5vw,62px);bottom:135px;display:grid;justify-items:center;gap:7px;padding:10px;border:1px solid #c8ecff66;border-radius:16px;background:#142638d9;pointer-events:auto;color:#e7f5ff}
+.skypark-walk[hidden]{display:none}
+.skypark-walk>span{font-size:.65rem;letter-spacing:.03em}
+.skypark-walk-pad{display:grid;grid-template-columns:repeat(3,37px);grid-template-rows:repeat(3,32px);gap:3px}
+.skypark-walk-pad button{padding:0;border-radius:8px;background:#31465d;color:white;border:1px solid #8cabc1;font-size:1.1rem;touch-action:none;user-select:none}
+.skypark-walk [data-walk="forward"]{grid-area:1/2}.skypark-walk [data-walk="left"]{grid-area:2/1}.skypark-walk [data-walk="right"]{grid-area:2/3}.skypark-walk [data-walk="back"]{grid-area:3/2}
+@media(max-width:600px){.skypark-walk{bottom:150px;right:14px;padding:8px}}
