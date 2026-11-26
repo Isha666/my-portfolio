@@ -1,6 +1,6 @@
 import * as T from './vendor/three.module.js';
-import {skyParkFloors,skyParkDeckHeight,skyParkDeckRise} from './city-skypark-levels.js?v=clear-city-sites-1';
-import {addSkyParkDetails} from './city-skypark-details.js?v=clear-city-sites-1';
+import {skyParkFloors,skyParkDeckHeight,skyParkDeckRise} from './city-skypark-levels.js?v=skypark-gold-grid-1';
+import {addSkyParkDetails} from './city-skypark-details.js?v=skypark-gold-grid-1';
 
 export const skyParkDuration=17.8;
 const clamp=value=>Math.max(0,Math.min(1,value));

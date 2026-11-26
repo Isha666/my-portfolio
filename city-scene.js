@@ -1,16 +1,16 @@
 import * as T from './vendor/three.module.js';
-import {driveLength,heading,streetPoint,skyParkOffset,reserveSkyParkLot} from './city-route.js?v=clear-city-sites-1';
-import {addCityBackdrop} from './city-backdrop.js?v=clear-city-sites-1';
-import {createCityAttractions} from './city-attractions.js?v=clear-city-sites-1';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=clear-city-sites-1';
-import {skyParkFloors,skyParkFloorHeight,skyParkDeckRise} from './city-skypark-levels.js?v=clear-city-sites-1';
-import {createSkyParkVisit} from './city-skypark.js?v=clear-city-sites-1';
+import {driveLength,heading,streetPoint,skyParkOffset,reserveSkyParkLot} from './city-route.js?v=skypark-gold-grid-1';
+import {addCityBackdrop} from './city-backdrop.js?v=skypark-gold-grid-1';
+import {createCityAttractions} from './city-attractions.js?v=skypark-gold-grid-1';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=skypark-gold-grid-1';
+import {skyParkFloors,skyParkFloorHeight,skyParkDeckRise} from './city-skypark-levels.js?v=skypark-gold-grid-1';
+import {createSkyParkVisit} from './city-skypark.js?v=skypark-gold-grid-1';
 import {disposeScene} from './scene-resources.js';
-import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=clear-city-sites-1';
+import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=skypark-gold-grid-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
 export const towerDistance=85;
-export {driveLength} from './city-route.js?v=clear-city-sites-1';
+export {driveLength} from './city-route.js?v=skypark-gold-grid-1';
 export const pavilionDistance=49;
 
 function makeCoupe(){
@@ -533,7 +533,19 @@ export function createCityScene(canvas){
  part(crowns,box,neon[1],-1.25,25.48,0,.09,.16,9.85);
  part(crowns,box,neon[1],-1.25,27.16,0,.09,.14,9.85);
  const terraces=site(43,skyParkOffset);
- const terraceColors=facadeLights(43,.50),terraceWash=towerGradient(1);
+ const terraceColors=facadeLights(43,.50);
+ const skyParkBlack=standard('#080c13',.23,.72),skyParkFrame=standard('#4b4232',.42,.65);
+ const goldWindows=['#ffd78c','#e9aa4b','#fff0bd'].map(color=>new T.MeshBasicMaterial({color,fog:false,toneMapped:false}));
+ const terraceWash=new T.ShaderMaterial({toneMapped:false,uniforms:{clock:ledClock},
+  vertexShader:`varying vec2 panel;void main(){panel=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`uniform float clock;varying vec2 panel;
+   void main(){
+    float column=floor(panel.x*12.);
+    float line=1.-smoothstep(.035,.11,abs(fract(panel.x*12.)-.5));
+    float crossLine=(1.-smoothstep(.015,.045,abs(fract(panel.y*5.)-.5)))*.22;
+    vec3 tint=.52+.48*cos(vec3(0.,2.1,4.2)+clock*.38+column*.44+panel.y*1.6);
+    gl_FragColor=vec4(vec3(.012,.02,.036)+tint*(line*.88+crossLine),1.);
+   }`});
  const terraceBatches=new Map();
  function terraceInstance(material,x,y,z,w,h,d){
   if(!terraceBatches.has(material))terraceBatches.set(material,[]);
@@ -543,13 +555,18 @@ export function createCityScene(canvas){
  for(const z of [-11,0,11]){
   for(let tier=0;tier<10;tier++){
    const slide=(tier/9)**2*2.4;
-   part(terraces,box,z===0?terraceWash:cobalt,slide,(tier+.5)*towerHeight/10,z,5.7,towerHeight/10,7.1);
+   part(terraces,box,z===0?terraceWash:skyParkBlack,slide,(tier+.5)*towerHeight/10,z,5.7,towerHeight/10,7.1);
   }
   for(let floor=0;floor<skyParkFloors;floor++){
    const slide=(floor/(skyParkFloors-1))**2*2.4,y=floor*skyParkFloorHeight;
-   terraceInstance(pearl,slide,y+2.31,z,6.22,.15,7.42);
-   terraceInstance(terraceColors,slide-3.06,y+2.39,z,.09,.075,7.33);
-   for(const k of [-2.3,0,2.3])for(const side of [-1,1])terraceInstance(neon[(floor+side)%3===0?1:3],slide+side*2.88,y+1.18,z+k,.06,.86,1.31);
+   terraceInstance(z===0?pearl:skyParkFrame,slide,y+2.31,z,6.22,.10,7.42);
+   if(z===0)terraceInstance(terraceColors,slide-3.06,y+2.39,z,.09,.075,7.33);
+   if(z!==0)for(let column=0;column<9;column++)for(const side of [-1,1]){
+    const hash=Math.abs(Math.sin(floor*127.1+column*311.7+z*17.3+side*43.1)*43758.5453)%1;
+    if(hash>.43)terraceInstance(goldWindows[Math.floor(hash*31)%3],slide+side*2.866,y+1.18,z+(column-4)*.75,.045,1.02,.48);
+    if(hash<.64)terraceInstance(goldWindows[Math.floor(hash*29)%3],slide+(column-4)*.58,y+1.18,z+side*3.566,.38,1.02,.045);
+   }
+
   }
  }
  for(const [material,instances] of terraceBatches){
@@ -558,7 +575,7 @@ export function createCityScene(canvas){
   terraces.add(batch);
  }
  terraces.userData.facadeFinish=1;
- tallSign(terraces,1,-3.12,towerHeight*.52,0,2.30,towerHeight*.93,-Math.PI/2);
+
  part(terraces,ball,pearl,1.8,27.1+skyParkDeckRise,0,4.7,1.35,18.5);
  part(terraces,ball,terraceColors,1.8,27.97+skyParkDeckRise,0,4.4,.16,17.4);
  const rooftopBark=standard('#51404a'),rooftopLeaf=standard('#315e51');

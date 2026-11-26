@@ -1,6 +1,6 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=clear-city-sites-1';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=skypark-gold-grid-1';
 
-import {skyParkDuration,skyParkStatus} from './city-skypark.js?v=clear-city-sites-1';
+import {skyParkDuration,skyParkStatus} from './city-skypark.js?v=skypark-gold-grid-1';
 
 import {hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
