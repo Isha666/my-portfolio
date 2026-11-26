@@ -1,4 +1,4 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=ferris-ride-1';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=ferris-bottom-exit-1';
 
 import {hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
@@ -26,7 +26,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
  const pressedKeys=new Set(),heldPedals=new Set(),freeLook={yaw:0,pitch:0};
  let speed=0,waitingForTraffic=false,direction=1,turn=null,turnRequested=false;
  const uturn=root.querySelector('#cityUTurn'),rideFerris=root.querySelector('#rideFerris');
- let ferrisTarget=0,ferrisBlend=0;
+ let ferrisTarget=0,ferrisBlend=0,ferrisExitRequested=false;
  const riding=()=>ferrisTarget>0||ferrisBlend>0;
  const braking=()=>pressedKeys.has(' ')||heldPedals.has(brake);
  const accelerating=()=>pressedKeys.has('ArrowUp')||pressedKeys.has('w')||heldPedals.has(accelerator)||heldPedals.has(forward);
@@ -52,8 +52,8 @@ export function mountCity(root,{hatchTraversed=false}={}){
   const onWheel=riding();
   root.classList.toggle('city-riding',onWheel);
   rideFerris.hidden=!city||(!onWheel&&Math.abs(distance-67)>18);
-  rideFerris.disabled=!!turn||turnRequested||onWheel&&ferrisTarget===0;
-  rideFerris.textContent=ferrisTarget?'Return to car ↗':onWheel?'Returning to car…':'Ride the Ferris wheel ↗';
+  rideFerris.disabled=!!turn||turnRequested||ferrisExitRequested||onWheel&&ferrisTarget===0;
+  rideFerris.textContent=ferrisExitRequested?'Exit queued · waiting for the bottom':ferrisTarget?'Return to car ↗':onWheel?'Returning to car…':'Ride the Ferris wheel ↗';
   const near=!onWheel&&Math.abs(distance-towerDistance)<11;
   const atPavilion=!onWheel&&Math.abs(distance-pavilionDistance)<8;
   enter.disabled=!near;
@@ -62,7 +62,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
   const action=inspecting?'Return to the road ↗':'Look toward Waterfront Pavilion ↗';
   if(pavilion.textContent!==action)pavilion.textContent=action;
   const destination=near?'Leadership Tower':atPavilion?'Waterfront Pavilion':distance<41?'Right toward Waterfront Pavilion':distance<76?'Left toward Leadership Tower':distance>=driveLength?'End of the city drive':distance>160?'Skyline promenade':distance>105?'Continue toward the landmark district':'Scroll or hold ↑ to drive';
-  const status=onWheel?'Ferris wheel ride · Drag to look around':(turn?'Turning around':turnRequested?'Waiting for a safe U-turn':waitingForTraffic?'Waiting for traffic':destination)+' · '+(direction<0?'Return carriageway · ':'')+(lane?'Right lane':'Left lane');
+  const status=onWheel?(ferrisExitRequested?'Staying aboard until the cabin reaches the bottom':'Ferris wheel ride · Drag to look around'):(turn?'Turning around':turnRequested?'Waiting for a safe U-turn':waitingForTraffic?'Waiting for traffic':destination)+' · '+(direction<0?'Return carriageway · ':'')+(lane?'Right lane':'Left lane');
   if(hint.textContent!==status)hint.textContent=status;
  }
  function changeLane(value){
@@ -82,9 +82,10 @@ export function mountCity(root,{hatchTraversed=false}={}){
   if(!riding()){
    if(Math.abs(distance-67)>18)return;
    clearDrivingInput();inspecting=false;waitingForTraffic=false;
-   freeLook.yaw=freeLook.pitch=0;city.boardFerris();ferrisTarget=1;
+   freeLook.yaw=freeLook.pitch=0;city.boardFerris();ferrisTarget=1;ferrisExitRequested=false;
   }else{
-   ferrisTarget=0;clearDrivingInput();freeLook.yaw=freeLook.pitch=0;
+   if(ferrisExitRequested)return;
+   ferrisExitRequested=true;city.requestFerrisExit(reduced);clearDrivingInput();
   }
   updateDrive();
  };
@@ -250,10 +251,14 @@ export function mountCity(root,{hatchTraversed=false}={}){
   frameId=requestAnimationFrame(frame);
   const dt=Math.min(.045,(now-(previous||now))/1000);previous=now;
   if(document.hidden)return;
+  if(ferrisExitRequested&&city?.canLeaveFerris()){
+   ferrisExitRequested=false;ferrisTarget=0;
+   freeLook.yaw=freeLook.pitch=0;updateDrive();
+  }
   const previousBlend=ferrisBlend;
   if(ferrisTarget)ferrisBlend=reduced?1:Math.min(1,ferrisBlend+dt/1.8);
   else ferrisBlend=reduced?0:Math.max(0,ferrisBlend-dt/1.8);
-  if(previousBlend>0&&ferrisBlend===0)updateDrive();
+  if(previousBlend>0&&ferrisBlend===0){city?.leaveFerris();updateDrive();}
   if(turnRequested&&!turn&&city?.canUTurn(distance)){
    turn={elapsed:0,from:direction};turnRequested=false;
    uturn.textContent='↶ U-turn (U)';uturn.disabled=true;updateDrive();

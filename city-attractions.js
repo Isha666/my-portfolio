@@ -38,7 +38,7 @@ export function createCityAttractions(scene,streetPoint,heading){
  }
  beam(wheelSite,[0,centerY,-1.8],[0,centerY,1.8],.48,dark);
  const cabins=[];
- let rideCabin=0;
+ let rideCabin=0,wheelRotation=0,lastTickTime=0,exitRotation=null,exitReady=false;
  const cabinEye=new T.Vector3(),cabinLook=new T.Vector3();
  for(let i=0;i<20;i++){
   const angle=i*Math.PI*2/20,x=Math.cos(angle)*radius,y=Math.sin(angle)*radius;
@@ -143,7 +143,10 @@ export function createCityAttractions(scene,streetPoint,heading){
  const themes=[.56,.94,.61,.11,.77];
  function tick(time,showTime=time,distance=0,cameraMode='chase',lookingAround=false){
   nightSky.tick(showTime);
-  const rotation=time*.11;
+  wheelRotation+=Math.max(0,time-lastTickTime)*.11;
+  lastTickTime=time;
+  if(exitRotation!==null&&wheelRotation>=exitRotation){wheelRotation=exitRotation;exitReady=true;}
+  const rotation=wheelRotation;
   rotor.rotation.z=rotation;
   for(const {cabin,angle} of cabins){
    cabin.position.set(Math.cos(angle+rotation)*radius,centerY+Math.sin(angle+rotation)*radius,0);
@@ -183,9 +186,20 @@ export function createCityAttractions(scene,streetPoint,heading){
  tick(0);
  return {tick,
   board(){
+   exitRotation=null;exitReady=false;
    // Choose the gondola nearest the boarding platform, without resetting the wheel.
    rideCabin=cabins.reduce((best,entry,index)=>entry.cabin.position.y<cabins[best].cabin.position.y?index:best,0);
   },
+  requestExit(immediate=false){
+   const tau=Math.PI*2,phase=cabins[rideCabin].angle+wheelRotation;
+   let remaining=((Math.PI*1.5-phase)%tau+tau)%tau;
+   if(remaining>tau-.035)remaining=0;
+   exitRotation=wheelRotation+remaining;
+   if(immediate)wheelRotation=exitRotation;
+   exitReady=remaining===0||immediate;
+  },
+  canDisembark(){return exitReady;},
+  leave(){exitRotation=null;exitReady=false;},
   ridePose(eye,look){
    wheelSite.updateMatrixWorld(true);
    const cabin=cabins[rideCabin].cabin;

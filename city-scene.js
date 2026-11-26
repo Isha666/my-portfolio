@@ -1,9 +1,9 @@
 import * as T from './vendor/three.module.js';
 import {addCityBackdrop} from './city-backdrop.js?v=sculpted-skyline-1';
-import {createCityAttractions} from './city-attractions.js?v=ferris-ride-1';
-import {facadeFinishGLSL} from './city-facade-finish.js?v=ferris-ride-1';
+import {createCityAttractions} from './city-attractions.js?v=ferris-bottom-exit-1';
+import {facadeFinishGLSL} from './city-facade-finish.js?v=ferris-bottom-exit-1';
 import {disposeScene} from './scene-resources.js';
-import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=ferris-ride-1';
+import {createTraffic,crossings,laneOffsets} from './city-traffic.js?v=ferris-bottom-exit-1';
 import {createPressureLift,hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
 export const towerDistance=85;
@@ -775,6 +775,9 @@ export function createCityScene(canvas){
  return {
   resize,
   boardFerris(){attractions.board();},
+  requestFerrisExit(immediate=false){attractions.requestExit(immediate);},
+  canLeaveFerris(){return attractions.canDisembark();},
+  leaveFerris(){attractions.leave();},
   drive(from,to,lane,side=1){return trafficFlow.drive(from,to,occupiedLanes(lane,side),side);},
   canUTurn(distance){return trafficFlow.canTurn(distance);},
   canChangeLane(distance,lane,previousLane,side=1){return occupiedLanes(previousLane,side).length===1&&trafficFlow.canChange(distance,lane,side);},
