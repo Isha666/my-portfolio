@@ -57,10 +57,10 @@ export function createCitySky(scene){
     else if(age>=0.&&age<4.2){float expansion=52.*(1.-exp(-age*.85))*seed.z;
      point+=direction*expansion;point.y-=3.8*age*age;
      float shimmer=.78+.22*sin(age*23.+direction.x*40.);
-     alpha=pow(max(0.,1.-age/4.2),1.25)*shimmer*(1.-seed.y*3.);
+     alpha=pow(max(0.,1.-age/4.2),.85)*shimmer*(1.-seed.y*3.);
      tint=mix(color,vec3(1.,.76,.4),smoothstep(1.8,4.2,age)*.65);}
     vec4 p=modelViewMatrix*vec4(point,1.);gl_Position=projectionMatrix*p;
-    gl_PointSize=clamp(2300./max(1.,-p.z),1.4,4.)*(1.-seed.y*2.);}`,
+    gl_PointSize=clamp(2800./max(1.,-p.z),2.,5.)*(1.-seed.y*2.);}`,
   fragmentShader:`varying vec3 tint;varying float alpha;void main(){float r=length(gl_PointCoord-.5)*2.;float core=exp(-r*r*7.);gl_FragColor=vec4(tint*(1.+core*.8),core*alpha);}`
  }));
  fireworks.frustumCulled=false;fireworks.layers.enableAll();scene.add(fireworks);

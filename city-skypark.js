@@ -1,6 +1,6 @@
 import * as T from './vendor/three.module.js';
-import {skyParkFloors,skyParkDeckHeight,skyParkDeckRise} from './city-skypark-levels.js?v=skypark-50-floors-2';
-import {addSkyParkDetails} from './city-skypark-details.js?v=skypark-50-floors-2';
+import {skyParkFloors,skyParkDeckHeight,skyParkDeckRise} from './city-skypark-levels.js?v=clear-city-sites-1';
+import {addSkyParkDetails} from './city-skypark-details.js?v=clear-city-sites-1';
 
 export const skyParkDuration=17.8;
 const clamp=value=>Math.max(0,Math.min(1,value));
@@ -156,7 +156,7 @@ export function createSkyParkVisit(tower){
    }
   }
   landingEye.set(deckPosition.x,skyParkDeckHeight+1.6,deckPosition.y);
-  landingLook.set(deckPosition.x-170,30,deckPosition.y-95);
+  landingLook.set(deckPosition.x-260,skyParkDeckHeight-70,deckPosition.y-140);
   const step=ease((time-16.2)/1.6);
   localEye.lerp(landingEye,step);localLook.lerp(landingLook,step);
   tower.updateWorldMatrix(true,false);

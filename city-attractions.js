@@ -1,5 +1,5 @@
 import * as T from './vendor/three.module.js';
-import {createCitySky,skySites} from './city-sky.js?v=sky-celebration-1';
+import {createCitySky,skySites} from './city-sky.js?v=clear-city-sites-1';
 
 export function createCityAttractions(scene,streetPoint,heading){
  const wheelSite=new T.Group();

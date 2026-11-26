@@ -1,7 +1,7 @@
 import * as T from './vendor/three.module.js';
 
-export function addCityBackdrop(scene,streetPoint,heading){
- const ground=new T.Mesh(new T.PlaneGeometry(700,700),new T.MeshStandardMaterial({color:'#222338',roughness:.88,metalness:.12}));
+export function addCityBackdrop(scene,streetPoint,heading,reserveLot=(_,offset)=>offset){
+ const ground=new T.Mesh(new T.PlaneGeometry(2400,2400),new T.MeshStandardMaterial({color:'#222338',roughness:.88,metalness:.12}));
  ground.rotation.x=-Math.PI/2;ground.position.set(20,-.11,-85);scene.add(ground);
  const palettes=['#728de4','#c17cc0','#69bfc9','#c8a277'];
  const blocks=Array.from({length:16},()=>[]);
@@ -112,7 +112,7 @@ export function addCityBackdrop(scene,streetPoint,heading){
   material.customProgramCacheKey=()=> 'city-surrounding-windows';
   const towers=new T.InstancedMesh(geometry,material,buildings.length);
   buildings.forEach(({distance,offset,width,height,depth},i)=>{
-   streetPoint(transform.position,distance,offset,height/2);
+   streetPoint(transform.position,distance,reserveLot(distance,offset,Math.hypot(width,depth)*.5),height/2);
    transform.rotation.set(0,-heading(distance),0);
    transform.scale.set(width,height,depth);
    transform.updateMatrix();towers.setMatrixAt(i,transform.matrix);

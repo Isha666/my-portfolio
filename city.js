@@ -1,6 +1,6 @@
-import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=skypark-50-floors-2';
+import {createCityScene,towerDistance,pavilionDistance,driveLength} from './city-scene.js?v=clear-city-sites-1';
 
-import {skyParkDuration,skyParkStatus} from './city-skypark.js?v=skypark-50-floors-2';
+import {skyParkDuration,skyParkStatus} from './city-skypark.js?v=clear-city-sites-1';
 
 import {hatchApproachDuration} from './city-lift.js?v=hatch-entry-1';
 
@@ -45,7 +45,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
  let arriving=!reduced&&!!city,ascentTime=hatchTraversed?hatchApproachDuration:0;
  if(arriving)root.classList.add('city-arriving');
  function drive(delta){
-  if(arriving||tower.open||enterStart!==null||braking()||turn||turnRequested||riding()||visitingPark())return false;
+  if(arriving||tower.open||enterStart!==null||braking()||turn||turnRequested||riding()||visitingPark()||inspecting)return false;
   inspecting=false;
   const wanted=Math.max(0,Math.min(driveLength,distance+delta*direction));
   const next=city?city.drive(distance,wanted,lane,direction):wanted;
@@ -76,20 +76,20 @@ export function mountCity(root,{hatchTraversed=false}={}){
   enter.disabled=!near;
   enter.hidden=!near;
   pavilion.hidden=!atPavilion;
-  const action=inspecting?'Return to the road ↗':'View Waterfront Pavilion ↗';
+  const action=inspecting?'Return to the road ↗':'Enter Waterfront Pavilion ↗';
   if(pavilion.textContent!==action)pavilion.textContent=action;
   const destination=near?'Leadership Tower':atPavilion?'Waterfront Pavilion':distance<41?'Right toward Waterfront Pavilion':distance<76?'Left toward Leadership Tower':distance>=driveLength?'End of the city drive':distance>160?'Skyline promenade':distance>105?'Continue toward the landmark district':'Scroll or hold ↑ to drive';
-  const status=inspecting&&!onDeck&&!onWheel?'Waterfront Pavilion · Drag to look around':onDeck?(parkWalkingBack?'Walking back to the elevator':skyParkStatus(parkTime,parkTarget===0)):onWheel?(ferrisExitRequested?'Staying aboard until the cabin reaches the bottom':'Ferris wheel ride · Drag to look around'):(turn?'Turning around':turnRequested?'Waiting for a safe U-turn':waitingForTraffic?'Waiting for traffic':destination)+' · '+(direction<0?'Return carriageway · ':'')+(lane?'Right lane':'Left lane');
+  const status=inspecting&&!onDeck&&!onWheel?'Waterfront lounge · Water view · Drag to look around':onDeck?(parkWalkingBack?'Walking back to the elevator':skyParkStatus(parkTime,parkTarget===0)):onWheel?(ferrisExitRequested?'Staying aboard until the cabin reaches the bottom':'Ferris wheel ride · Drag to look around'):(turn?'Turning around':turnRequested?'Waiting for a safe U-turn':waitingForTraffic?'Waiting for traffic':destination)+' · '+(direction<0?'Return carriageway · ':'')+(lane?'Right lane':'Left lane');
   if(hint.textContent!==status)hint.textContent=status;
  }
  function changeLane(value){
-  if(!city||arriving||tower.open||enterStart!==null||turn||turnRequested||riding()||visitingPark())return;
+  if(!city||arriving||tower.open||enterStart!==null||turn||turnRequested||riding()||visitingPark()||inspecting)return;
   if(value===lane)return;
   if(!city.canChangeLane(distance,value,lane,direction)){waitingForTraffic=true;updateDrive();return;}
   lane=value;waitingForTraffic=false;inspecting=false;updateDrive();
  }
  function requestUTurn(){
-  if(!city||arriving||tower.open||enterStart!==null||turn||riding()||visitingPark())return;
+  if(!city||arriving||tower.open||enterStart!==null||turn||riding()||visitingPark()||inspecting)return;
   clearDrivingInput();turnRequested=!turnRequested;
   uturn.textContent=turnRequested?'Cancel U-turn':'↶ U-turn (U)';
   updateDrive();
@@ -134,6 +134,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
    if(parkTime>=skyParkDuration&&!parkWalkingBack)city?.scrollSkyPark(event.deltaX*multiplier*.008,event.deltaY*multiplier*.008,freeLook.yaw);
    return;
   }
+  if(inspecting)return;
   drive(Math.sign(event.deltaY)*Math.min(21,Math.abs(event.deltaY)*multiplier*.04));
  },{passive:false});
  canvas.addEventListener('pointerdown',event=>{
@@ -164,6 +165,17 @@ export function mountCity(root,{hatchTraversed=false}={}){
    }
    return;
   }
+  if(inspecting){
+   if(event.key==='Escape'){event.preventDefault();pavilion.click();}
+   else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){
+    event.preventDefault();
+    if(event.key==='ArrowLeft')freeLook.yaw+=.08;
+    if(event.key==='ArrowRight')freeLook.yaw-=.08;
+    if(event.key==='ArrowUp')freeLook.pitch=Math.min(1,freeLook.pitch+.06);
+    if(event.key==='ArrowDown')freeLook.pitch=Math.max(-1,freeLook.pitch-.06);
+   }
+   return;
+  }
   if(riding()){if(event.key==='Escape'){event.preventDefault();rideFerris.click();}return;}
   if(event.key.toLowerCase()==='u'){event.preventDefault();if(!event.repeat)requestUTurn();return;}
   if(['ArrowLeft','ArrowRight','a','d'].includes(event.key)){
@@ -172,6 +184,9 @@ export function mountCity(root,{hatchTraversed=false}={}){
   if(!driveKeys.includes(event.key)||event.key===' '&&event.target.closest?.('button,a'))return;
   event.preventDefault();pressedKeys.add(event.key);
  });
+ for(const button of deckControls.querySelectorAll('button[data-deck-view]'))button.onclick=()=>{
+  freeLook.yaw=0;freeLook.pitch=button.dataset.deckView==='sky'?.5:-.1;
+ };
  for(const button of deckControls.querySelectorAll('button[data-walk]')){
   button.addEventListener('pointerdown',event=>{
    if(event.button!==0)return;event.preventDefault();button.setPointerCapture(event.pointerId);deckHeld.add(button.dataset.walk);
@@ -328,7 +343,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
    turn.elapsed+=dt;
    if(turn.elapsed>=2){direction=-turn.from;turn=null;uturn.disabled=false;updateDrive();}
   }
-  if(!arriving&&!tower.open&&enterStart===null&&!turn&&!turnRequested&&!riding()&&!visitingPark()){
+  if(!arriving&&!tower.open&&enterStart===null&&!turn&&!turnRequested&&!riding()&&!visitingPark()&&!inspecting){
    if(braking())speed=0;
    else if(backing()){speed=0;drive(-dt*8);}
    else{
@@ -348,7 +363,7 @@ export function mountCity(root,{hatchTraversed=false}={}){
   }
   if(enterStart===null&&!tower.open){
    const desired=inspecting?1:0;
-   approach=reduced?desired:approach+(desired-approach)*(1-Math.exp(-dt*6));
+   approach=reduced?desired:Math.max(0,Math.min(1,approach+Math.sign(desired-approach)*dt/(inspecting?3:1.8)));
   }
   if(arriving)ascentTime+=dt;
   const driving=city.render(distance,dt,approach,arriving?ascentTime:null,lane,Math.abs(distance-pavilionDistance)<8?-1:1,cameraPicker.value,reduced,freeLook,direction,turn?{progress:Math.min(1,turn.elapsed/2),from:turn.from}:null,ferrisBlend,parkTime);

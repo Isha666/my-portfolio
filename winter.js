@@ -428,7 +428,7 @@ async function openLeadership({hatchTraversed=false}={}){
  portalStatus.textContent='Preparing the water elevator…';
  portalStatus.hidden=false;
  try{
-  const {mountCity}=await import('./city.js?v=skypark-50-floors-2');
+  const {mountCity}=await import('./city.js?v=clear-city-sites-1');
   if(generation!==portalGeneration)return;
   close();
   aboutStop.resetJourney();
