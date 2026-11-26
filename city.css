@@ -102,3 +102,7 @@ body.in-city{overflow:hidden}
  .drive-controls{gap:8px}
  .drive .city-pedal{width:66px}
 }
+
+.city-riding .drive-controls,.city-riding .camera-picker,.city-riding #cityUTurn{display:none}
+.city-riding .drive{min-width:0;max-width:calc(100vw - 28px)}
+.city-riding #rideFerris{border-color:#b9edff;background:#23364a;color:#effbff}

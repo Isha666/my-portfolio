@@ -38,6 +38,8 @@ export function createCityAttractions(scene,streetPoint,heading){
  }
  beam(wheelSite,[0,centerY,-1.8],[0,centerY,1.8],.48,dark);
  const cabins=[];
+ let rideCabin=0;
+ const cabinEye=new T.Vector3(),cabinLook=new T.Vector3();
  for(let i=0;i<20;i++){
   const angle=i*Math.PI*2/20,x=Math.cos(angle)*radius,y=Math.sin(angle)*radius;
   for(const z of [-.65,.65])beam(rotor,[0,0,z],[x,y,z],.045,glow[i%4]);
@@ -47,6 +49,7 @@ export function createCityAttractions(scene,streetPoint,heading){
   mesh(cabin,box,glow[i%4],[0,-.64,0],[1.45,.18,1.2]);
   mesh(cabin,box,glass,[0,-1.15,0],[1.35,.88,1.1]);
   mesh(cabin,box,dark,[0,-1.66,0],[1.48,.2,1.2]);
+  mesh(cabin,box,dark,[0,-1.43,-.25],[1.1,.12,.45]);
   for(const side of [-1,1]){
    beam(cabin,[side*.66,-.7,-.53],[side*.66,-1.6,-.53],.035,frame);
    beam(cabin,[side*.66,-.7,.53],[side*.66,-1.6,.53],.035,frame);
@@ -178,5 +181,17 @@ export function createCityAttractions(scene,streetPoint,heading){
 
  }
  tick(0);
- return {tick};
+ return {tick,
+  board(){
+   // Choose the gondola nearest the boarding platform, without resetting the wheel.
+   rideCabin=cabins.reduce((best,entry,index)=>entry.cabin.position.y<cabins[best].cabin.position.y?index:best,0);
+  },
+  ridePose(eye,look){
+   wheelSite.updateMatrixWorld(true);
+   const cabin=cabins[rideCabin].cabin;
+   cabinEye.set(.15,-1.08,.43);cabinLook.set(15,1.3,21);
+   eye.copy(cabin.localToWorld(cabinEye));
+   look.copy(cabin.localToWorld(cabinLook));
+  }
+ };
 }
