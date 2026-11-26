@@ -126,8 +126,8 @@ if(!seen&&(!savedSection||savedSection==='home')&&typeof intro.showModal==='func
  function skipIntro(){video.pause();reveal();}
  skip.onclick=skipIntro;
  intro.addEventListener('cancel',event=>{event.preventDefault();skipIntro();});
- video.poster='assets/intro/neon-pupil.jpg?v=2';
- video.src='assets/intro/neon-pupil.mp4?v=2';
+ video.poster='assets/intro/neon-pupil.jpg?v=source-720p-1';
+ video.src='assets/intro/neon-pupil.mp4?v=source-720p-1';
  intro.showModal();
  playBed();
 }
